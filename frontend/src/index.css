@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .login-illustration-bg {
+    background-image: url('https://i.ibb.co/L5rK5gD/Screenshot-2023-11-20-at-10-34-40-PM.png');
+  }
+}
+
+@layer base {
+    body {
+      @apply font-sans bg-primary text-gray-500;
+    }
+ 
+    h1, h2, h3, h4, h5, h6 {
+      @apply font-bold;
+    }
+ 
+    h1 {
+      @apply text-4xl;
+    }
+ 
+    h2 {
+      @apply text-3xl;
+    }
+ 
+    h3 {
+      @apply text-2xl;
+    }
+  }
