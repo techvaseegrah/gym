@@ -335,13 +335,28 @@ const AdminAttendancePage = () => {
 
             {/* Recent Attendance Records Table */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="flex justify-between items-center p-6">
-                    <h3 className="text-xl font-semibold text-gray-700">Recent Attendance Records</h3>
-                    <div className="flex gap-4">
-                        <button onClick={() => openModal('rfid')} className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition duration-300">
+                <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4">Recent Attendance Records</h3>
+                    
+                    {/* Desktop view - buttons aligned to the right */}
+                    <div className="hidden md:flex justify-between items-center">
+                        <div></div> {/* Empty div for spacing */}
+                        <div className="flex gap-4">
+                            <button onClick={() => openModal('rfid')} className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition duration-300">
+                                <FaUserTag /> RFID
+                            </button>
+                            <button onClick={() => openModal('face')} className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-teal-600 transition duration-300" disabled={!modelsLoaded}>
+                                <FaCamera /> {modelsLoaded ? 'Face ID' : 'Loading...'}
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* Mobile view - buttons stacked under heading */}
+                    <div className="md:hidden flex flex-col gap-3 mb-4">
+                        <button onClick={() => openModal('rfid')} className="flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition duration-300">
                             <FaUserTag /> RFID
                         </button>
-                        <button onClick={() => openModal('face')} className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-teal-600 transition duration-300" disabled={!modelsLoaded}>
+                        <button onClick={() => openModal('face')} className="flex items-center justify-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-teal-600 transition duration-300" disabled={!modelsLoaded}>
                             <FaCamera /> {modelsLoaded ? 'Face ID' : 'Loading...'}
                         </button>
                     </div>

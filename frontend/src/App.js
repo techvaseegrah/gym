@@ -92,10 +92,12 @@ const App = () => {
     };
 
     const AdminLayout = ({ children }) => {
+        const location = useLocation();
+        const isAskDoubtPage = location.pathname === '/admin/ask-doubt';
         const [isSidebarOpen, setSidebarOpen] = useState(false);
         const closeSidebar = () => setSidebarOpen(false);
         return (
-            <div className="relative min-h-screen bg-gray-100">
+            <div className={`relative min-h-screen bg-gray-100 ${isAskDoubtPage ? 'no-page-scroll' : ''}`}>
                 {isSidebarOpen && <div className="fixed inset-0 z-20 bg-black opacity-50 lg:hidden" onClick={closeSidebar}></div>}
     
                 <div className="lg:hidden flex justify-between items-center bg-gray-800 text-white p-4 sticky top-0 z-10">
@@ -109,7 +111,9 @@ const App = () => {
                     <AdminSidebar handleLogout={confirmLogout} closeSidebar={closeSidebar} />
                 </aside>
     
-                <main className="lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">{children}</main>
+                <main className="lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">
+                    {children}
+                </main>
                 
                 {/* Logout Confirmation Modal for Admin */}
                 {showLogoutConfirm && (
@@ -139,10 +143,12 @@ const App = () => {
     };
 
     const FighterLayout = ({ children }) => {
+        const location = useLocation();
+        const isAskDoubtPage = location.pathname === '/fighter/ask-doubt';
         const [isSidebarOpen, setSidebarOpen] = useState(false);
         const closeSidebar = () => setSidebarOpen(false);
         return (
-            <div className="relative min-h-screen bg-gray-100">
+            <div className={`relative min-h-screen bg-gray-100 ${isAskDoubtPage ? 'no-page-scroll' : ''}`}>
                 {isSidebarOpen && <div className="fixed inset-0 z-20 bg-black opacity-50 lg:hidden" onClick={closeSidebar}></div>}
     
                 <div className="lg:hidden flex justify-between items-center bg-gray-800 text-white p-4 sticky top-0 z-10">
@@ -156,7 +162,9 @@ const App = () => {
                     <FighterSidebar handleLogout={confirmLogout} closeSidebar={closeSidebar} />
                 </aside>
     
-                <main className="lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">{children}</main>
+                <main className="lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">
+                    {children}
+                </main>
                 
                 {/* Logout Confirmation Modal for Fighter */}
                 {showLogoutConfirm && (

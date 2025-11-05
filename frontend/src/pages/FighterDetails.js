@@ -150,9 +150,70 @@ const FighterDetails = () => {
                     
                     {fighterData.assessment && (
                         <div className="mt-8">
-                            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                                <h2 className="text-2xl font-bold border-b-2 border-red-500 pb-2 mb-6 text-white">Skill Assessment</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                            <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
+                                <h2 className="text-xl md:text-2xl font-bold border-b-2 border-red-500 pb-2 mb-4 text-white">Skill Assessment</h2>
+                                
+                                {/* Mobile view - stacked layout with compact tables */}
+                                <div className="md:hidden space-y-6">
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-3 text-red-400">Technical Advantage</h3>
+                                        <div className="bg-gray-700 rounded overflow-hidden">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="bg-gray-600">
+                                                        <th className="py-2 px-2 text-left font-medium text-gray-300">Skill</th>
+                                                        <th className="py-2 px-1 text-center font-medium text-gray-300">Fighter</th>
+                                                        <th className="py-2 px-1 text-center font-medium text-gray-300">Master</th>
+                                                        <th className="py-2 px-1 text-center font-medium text-gray-300">Diff</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {technicalSkills.map(skill => (
+                                                        <tr key={skill} className="border-t border-gray-600">
+                                                            <td className="py-2 px-2 text-gray-300 capitalize">{skill.replace(/_/g, ' ')}</td>
+                                                            <td className="py-2 px-1 text-center text-white">{fighterData.assessment[skill]?.fighterScore || 0}</td>
+                                                            <td className="py-2 px-1 text-center text-white">{fighterData.assessment[skill]?.masterScore || 0}</td>
+                                                            <td className="py-2 px-1 text-center text-white font-medium">
+                                                                {(fighterData.assessment[skill]?.masterScore || 0) - (fighterData.assessment[skill]?.fighterScore || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-3 text-red-400">Skill Advantage</h3>
+                                        <div className="bg-gray-700 rounded overflow-hidden">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="bg-gray-600">
+                                                        <th className="py-2 px-2 text-left font-medium text-gray-300">Skill</th>
+                                                        <th className="py-2 px-1 text-center font-medium text-gray-300">Fighter</th>
+                                                        <th className="py-2 px-1 text-center font-medium text-gray-300">Master</th>
+                                                        <th className="py-2 px-1 text-center font-medium text-gray-300">Diff</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {skillAdvantages.map(skill => (
+                                                        <tr key={skill} className="border-t border-gray-600">
+                                                            <td className="py-2 px-2 text-gray-300 capitalize">{skill.replace(/_/g, ' ')}</td>
+                                                            <td className="py-2 px-1 text-center text-white">{fighterData.assessment[skill]?.fighterScore || 0}</td>
+                                                            <td className="py-2 px-1 text-center text-white">{fighterData.assessment[skill]?.masterScore || 0}</td>
+                                                            <td className="py-2 px-1 text-center text-white font-medium">
+                                                                {(fighterData.assessment[skill]?.masterScore || 0) - (fighterData.assessment[skill]?.fighterScore || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Desktop view - side by side layout */}
+                                <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <h3 className="text-xl font-semibold mb-4 text-red-400">Technical Advantage</h3>
                                         <table className="w-full">
@@ -186,10 +247,11 @@ const FighterDetails = () => {
                                         </table>
                                     </div>
                                 </div>
-                                <div className="mt-6 pt-4 border-t border-gray-700">
-                                    <p className="text-lg text-white">
+                                
+                                <div className="mt-4 pt-4 border-t border-gray-700">
+                                    <p className="text-base md:text-lg text-white">
                                         <span className="font-bold text-gray-400">Special Grade Score: </span>
-                                        {fighterData.assessment.specialGradeScore || 'N/A'}
+                                        <span className="font-medium">{fighterData.assessment.specialGradeScore || 'N/A'}</span>
                                     </p>
                                 </div>
                             </div>

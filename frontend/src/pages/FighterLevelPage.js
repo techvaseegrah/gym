@@ -105,25 +105,29 @@ const FighterLevelPage = () => {
 
         return (
             <tr className="border-b border-gray-200">
-                <td className="py-2 px-2 capitalize text-gray-700 font-medium">{skill.replace(/_/g, ' ')}</td>
-                <td className="py-2 px-2">
+                <td className="py-2 px-2 capitalize text-gray-700 font-medium text-xs md:text-sm">{skill.replace(/_/g, ' ')}</td>
+                <td className="py-2 px-1 md:px-2">
                     <input
                         type="number"
                         value={fighterScore}
                         onChange={(e) => handleSkillChange(skill, 'fighterScore', e.target.value)}
-                        className="w-full p-2 bg-white border border-gray-300 rounded-md text-gray-800 text-center focus:ring-red-500 focus:border-red-500"
+                        className="w-full p-1 md:p-2 bg-white border border-gray-300 rounded text-gray-800 text-center text-xs md:text-sm focus:ring-red-500 focus:border-red-500"
+                        min="0"
+                        max="100"
                     />
                 </td>
-                <td className="py-2 px-2">
+                <td className="py-2 px-1 md:px-2">
                     <input
                         type="number"
                         value={masterScore}
                         onChange={(e) => handleSkillChange(skill, 'masterScore', e.target.value)}
-                        className="w-full p-2 bg-white border border-gray-300 rounded-md text-gray-800 text-center focus:ring-red-500 focus:border-red-500"
+                        className="w-full p-1 md:p-2 bg-white border border-gray-300 rounded text-gray-800 text-center text-xs md:text-sm focus:ring-red-500 focus:border-red-500"
+                        min="0"
+                        max="100"
                     />
                 </td>
-                <td className="py-2 px-2">
-                    <div className="w-full p-2 bg-gray-200 border border-gray-300 rounded-md text-gray-800 text-center">
+                <td className="py-2 px-1 md:px-2">
+                    <div className="w-full p-1 md:p-2 bg-gray-200 border border-gray-300 rounded text-gray-800 text-center text-xs md:text-sm">
                         {scoreDiff}
                     </div>
                 </td>
@@ -193,7 +197,49 @@ const FighterLevelPage = () => {
                 {selectedFighterId ? (
                     <div className="bg-white p-6 rounded-lg shadow-md">
                         <form onSubmit={handleSubmit}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                            {/* Mobile view - stacked layout */}
+                            <div className="md:hidden space-y-8">
+                                <div>
+                                    <h3 className="text-lg font-semibold my-4 text-red-600">Technical Advantage</h3>
+                                    <div className="bg-gray-50 rounded overflow-hidden">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="bg-gray-200">
+                                                    <th className="py-2 px-2 text-left font-medium text-gray-700">Skill</th>
+                                                    <th className="py-2 px-1 text-center font-medium text-gray-700">Fighter</th>
+                                                    <th className="py-2 px-1 text-center font-medium text-gray-700">Master</th>
+                                                    <th className="py-2 px-1 text-center font-medium text-gray-700">Diff</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {technicalSkills.map(skill => <SkillRow key={skill} skill={skill} />)}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 className="text-lg font-semibold my-4 text-red-600">Skill Advantage</h3>
+                                    <div className="bg-gray-50 rounded overflow-hidden">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="bg-gray-200">
+                                                    <th className="py-2 px-2 text-left font-medium text-gray-700">Skill</th>
+                                                    <th className="py-2 px-1 text-center font-medium text-gray-700">Fighter</th>
+                                                    <th className="py-2 px-1 text-center font-medium text-gray-700">Master</th>
+                                                    <th className="py-2 px-1 text-center font-medium text-gray-700">Diff</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {skillAdvantages.map(skill => <SkillRow key={skill} skill={skill} />)}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Desktop view - side by side layout */}
+                            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-x-8">
                                 <div>
                                     <h3 className="text-xl font-semibold my-4 text-red-600">Technical Advantage</h3>
                                     {/* --- Switched to a table for proper alignment --- */}

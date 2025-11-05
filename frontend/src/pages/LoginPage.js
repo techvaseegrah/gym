@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Added eye icons for password toggle
 import api from '../api/api';
 import LoginForm from '../components/LoginForm';
 
@@ -12,6 +13,7 @@ const LoginPage = ({ setUser }) => {
     const [error, setError] = useState(null); //
     const [loading, setLoading] = useState(false); //
     const [searchTerm, setSearchTerm] = useState(''); // Add search term state
+    const [showAdminPassword, setShowAdminPassword] = useState(false); // State for toggling admin password visibility
     const navigate = useNavigate(); //
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
@@ -144,9 +146,28 @@ const LoginPage = ({ setUser }) => {
                                 <label className="block text-sm font-medium text-gray-400 mb-2" htmlFor="admin-email">Email</label>
                                 <input id="admin-email" type="email" value={adminCredentials.email} onChange={(e) => setAdminCredentials({ ...adminCredentials, email: e.target.value })} placeholder="email@example.com" className="w-full bg-gray-800 text-white px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required />
                             </div>
-                            <div>
+                            <div className="relative">
                                 <label className="block text-sm font-medium text-gray-400 mb-2" htmlFor="admin-password">Password</label>
-                                <input id="admin-password" type="password" value={adminCredentials.password} onChange={(e) => setAdminCredentials({ ...adminCredentials, password: e.target.value })} placeholder="••••••••" className="w-full bg-gray-800 text-white px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required />
+                                <input 
+                                    id="admin-password" 
+                                    type={showAdminPassword ? "text" : "password"} 
+                                    value={adminCredentials.password} 
+                                    onChange={(e) => setAdminCredentials({ ...adminCredentials, password: e.target.value })} 
+                                    placeholder="••••••••" 
+                                    className="w-full bg-gray-800 text-white px-4 py-3 pr-12 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" 
+                                    required 
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center top-6"
+                                >
+                                    {showAdminPassword ? (
+                                        <FaEyeSlash className="text-gray-400 hover:text-white" size={20} />
+                                    ) : (
+                                        <FaEye className="text-gray-400 hover:text-white" size={20} />
+                                    )}
+                                </button>
                             </div>
                             <button type="submit" className="w-full bg-red-600 font-semibold py-3 rounded-lg hover:bg-red-700 transition duration-300 disabled:bg-gray-600 text-white" disabled={loading}>
                                 {loading ? 'Signing in...' : 'Sign in as Admin'}
