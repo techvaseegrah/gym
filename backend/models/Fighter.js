@@ -25,7 +25,7 @@ const assessmentSchema = new mongoose.Schema({
     rise_kick: ScoreSchema,
     boxing_movements: ScoreSchema,
     push_ups: ScoreSchema,
-    cambo: ScoreSchema, 
+    cambo: ScoreSchema, // Note: Assuming 'Cambo' is a skill name
 
     // Skill Advantage
     stamina: ScoreSchema,
@@ -38,7 +38,7 @@ const assessmentSchema = new mongoose.Schema({
     // Special Grade Score
     specialGradeScore: { type: Number, default: 0 },
 
-    // Keeping the coreLevel object from previous work
+    // Keeping the coreLevel object from previous work, can be removed if no longer needed
     coreLevel: {
         power: { type: Number, default: 0, min: 0, max: 100 },
         speed: { type: Number, default: 0, min: 0, max: 100 },
@@ -47,20 +47,20 @@ const assessmentSchema = new mongoose.Schema({
         technique: { type: Number, default: 0, min: 0, max: 100 },
         footwork: { type: Number, default: 0, min: 0, max: 100 },
     },
-}, { _id: false, minimize: false }); 
+}, { _id: false, minimize: false }); // `minimize: false` ensures empty score objects are saved
 
 const fighterSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true }, 
-    password: { type: String, required: true }, 
-    role: { type: String, default: 'fighter' }, 
+    email: { type: String, required: true, unique: true }, //
+    password: { type: String, required: true }, //
+    role: { type: String, default: 'fighter' }, //
     rfid: {
         type: String,
         required: true,
         unique: true
     },
-    profile_completed: { type: Boolean, default: false }, 
-    name: { type: String }, 
-    fighterBatchNo: { type: String }, 
+    profile_completed: { type: Boolean, default: false }, //
+    name: { type: String }, //
+    fighterBatchNo: { type: String }, //
     // ... other personal info fields
     age: { type: Number },
     gender: { type: String },
@@ -78,17 +78,13 @@ const fighterSchema = new mongoose.Schema({
     martialArtsKnowledge: { type: String },
     goals: { type: [String] },
     referral: { type: String },
-    achievements: { type: String }, 
+    achievements: { type: String }, // Added achievements field
     agreement: { type: Boolean },
     
-    // Password Reset Fields
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
+    assessment: { type: assessmentSchema, default: () => ({}) }, // Use the new schema
     
-    assessment: { type: assessmentSchema, default: () => ({}) }, 
-    
-    faceEncodings: { type: mongoose.Schema.Types.Mixed }, 
-    profilePhoto: { type: String } 
+    faceEncodings: { type: mongoose.Schema.Types.Mixed }, //
+    profilePhoto: { type: String } // Store Base64 encoded image string
 }, { timestamps: true });
 
 module.exports = mongoose.model('Fighter', fighterSchema);
