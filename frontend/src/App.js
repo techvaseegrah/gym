@@ -1,3 +1,4 @@
+
 // client/src/App.js
 
 import React, { useState, useEffect } from 'react';
@@ -6,7 +7,6 @@ import { FaBars, FaTimes } from 'react-icons/fa';
 
 // Import Pages
 import LoginPage from './pages/LoginPage';
-import ResetPasswordPage from './pages/ResetPasswordPage'; 
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import DashboardPage from './pages/DashboardPage';
 import AddFighterPage from './pages/AddFighterPage';
@@ -201,11 +201,10 @@ const App = () => {
     return (
         <Router>
             <Routes>
-                {/* Public Routes */}
+                {/* --- THIS IS THE CORRECTED LOGIN ROUTE --- */}
+                {/* It now passes the 'user' state down and always renders LoginPage */
+                }
                 <Route path="/" element={<LoginPage setUser={setUser} user={user} />} />
-                
-                {/* --- CHANGED THIS ROUTE (Removed :token) --- */}
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                 {/* Admin Routes */}
                 <Route path="/fighter/level" element={<ProtectedRoute role="fighter"><FighterLayout><FighterLevelViewPage /></FighterLayout></ProtectedRoute>} />
@@ -219,7 +218,6 @@ const App = () => {
                 <Route path="/fighter/attendance/face" element={<ProtectedRoute role="fighter"><FighterLayout><FighterFaceRecognitionPage /></FighterLayout></ProtectedRoute>} />
                 <Route path="/admin/ask-doubt" element={<ProtectedRoute role="admin"><AdminLayout><AskDoubtPage /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/fighter-level" element={<ProtectedRoute role="admin"><AdminLayout><FighterLevelPage /></AdminLayout></ProtectedRoute>} />
-                
                 {/* Fighter Routes */}
                 <Route path="/fighter/ask-doubt" element={<ProtectedRoute role="fighter"><FighterLayout><AskDoubtPage /></FighterLayout></ProtectedRoute>} />
                 <Route path="/fighter/complete-profile" element={<ProtectedRoute role="fighter"><CompleteProfilePage /></ProtectedRoute>} />
