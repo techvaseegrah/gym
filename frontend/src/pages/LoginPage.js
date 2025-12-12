@@ -1,53 +1,55 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Added eye icons for password toggle
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import api from '../api/api';
 import LoginForm from '../components/LoginForm';
+import ForgotPassword from '../components/ForgotPassword';
 
 const LoginPage = ({ setUser }) => {
-    const [loginType, setLoginType] = useState(null); // <-- State to control which view is shown: null, 'admin', or 'fighter'
-    const [adminCredentials, setAdminCredentials] = useState({ email: '', password: '' }); //
-    const [fighterCredentials, setFighterCredentials] = useState({ password: '' }); //
-    const [fighters, setFighters] = useState([]); //
-    const [selectedFighter, setSelectedFighter] = useState(null); //
-    const [error, setError] = useState(null); //
-    const [loading, setLoading] = useState(false); //
-    const [searchTerm, setSearchTerm] = useState(''); // Add search term state
-    const [showAdminPassword, setShowAdminPassword] = useState(false); // State for toggling admin password visibility
-    const navigate = useNavigate(); //
+    const [loginType, setLoginType] = useState(null);
+    const [adminCredentials, setAdminCredentials] = useState({ email: '', password: '' });
+    const [fighters, setFighters] = useState([]);
+    const [selectedFighter, setSelectedFighter] = useState(null);
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showAdminPassword, setShowAdminPassword] = useState(false);
+    const navigate = useNavigate();
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const [forgotPasswordRole, setForgotPasswordRole] = useState(null); // To track which role is resetting password
 
     useEffect(() => {
         if (loginType === 'fighter') {
             const fetchFighters = async () => {
-                setLoading(true); //
+                setLoading(true);
                 try {
-                    const res = await api.get('/fighters/list'); //
-                    setFighters(res.data); //
+                    const res = await api.get('/fighters/list');
+                    setFighters(res.data);
                 } catch (err) {
-                    setError('Failed to fetch fighter list.'); //
+                    setError('Failed to fetch fighter list.');
                 } finally {
-                    setLoading(false); //
+                    setLoading(false);
                 }
             };
-            fetchFighters(); //
+            fetchFighters();
         }
-    }, [loginType]); //
+    }, [loginType]);
 
     const handleAdminLogin = async (e) => {
-        e.preventDefault(); //
-        setError(null); //
-        setLoading(true); //
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
         try {
-            const res = await api.post('/auth/login', { ...adminCredentials, role: 'admin' }); //
-            localStorage.setItem('token', res.data.token); //
-            setUser(res.data.user); //
-            navigate('/admin/dashboard'); //
+            const res = await api.post('/auth/login', { ...adminCredentials, role: 'admin' });
+            localStorage.setItem('token', res.data.token);
+            setUser(res.data.user);
+            navigate('/admin/dashboard');
         } catch (err) {
-            setError('Invalid admin credentials.'); //
+            setError('Invalid admin credentials.');
         } finally {
-            setLoading(false); //
+            setLoading(false);
         }
     };
 
@@ -71,13 +73,6 @@ const LoginPage = ({ setUser }) => {
         }
     };
 
-    const handleFighterSelect = (fighter) => {
-        setSelectedFighter(fighter);
-        setFighterCredentials({ password: '' });
-        setError(null);
-        setIsPasswordModalOpen(true);
-    };
-
     // This resets the view to the button selection
     const resetLoginType = () => {
         setLoginType(null);
@@ -90,6 +85,20 @@ const LoginPage = ({ setUser }) => {
         fighter.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         fighter.rfid.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    if (showForgotPassword) {
+        return (
+            <ForgotPassword 
+                onBack={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordRole(null);
+                    setSelectedFighter(null);
+                }} 
+                role={forgotPasswordRole}
+                email={selectedFighter?.email} // Pass the email directly if available
+            />
+        );
+    }
 
     return (
         <div className="min-h-screen w-full flex flex-col items-center justify-center bg-white text-gray-900 p-4">
@@ -173,6 +182,18 @@ const LoginPage = ({ setUser }) => {
                             <button type="submit" className="w-full bg-red-600 font-semibold py-3 rounded-lg hover:bg-red-700 transition duration-300 disabled:bg-gray-600 text-white" disabled={loading}>
                                 {loading ? 'Signing in...' : 'Sign in as Admin'}
                             </button>
+                            <div className="text-center mt-4">
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setForgotPasswordRole('admin');
+                                        setShowForgotPassword(true);
+                                    }}
+                                    className="text-gray-400 hover:text-white text-sm hover:underline"
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
                         </form>
                     </div>
                 )}
@@ -187,8 +208,11 @@ const LoginPage = ({ setUser }) => {
                         {filteredFighters.map(fighter => (
                             <div 
                                 key={fighter._id} 
-                                onClick={() => handleFighterSelect(fighter)} 
                                 className="bg-gray-800 rounded-lg p-3 text-center cursor-pointer border-2 border-transparent hover:border-blue-500 hover:bg-gray-700 transition-all duration-200 transform hover:scale-105"
+                                onClick={() => {
+                                    setSelectedFighter(fighter);
+                                    setIsPasswordModalOpen(true);
+                                }}
                             >
                                 <img
                                     src="/logo.png" // Using the logo as a placeholder profile image
@@ -205,8 +229,16 @@ const LoginPage = ({ setUser }) => {
                 )}
 
                 {/* This button will only show when a login form is active */}
-                {loginType && (
+                {loginType === 'admin' && (
                     <div className="text-center mt-6">
+                        <button onClick={resetLoginType} className="text-gray-400 hover:text-white text-sm hover:underline">
+                            Back to role selection
+                        </button>
+                    </div>
+                )}
+                
+                {loginType === 'fighter' && (
+                    <div className="text-center mt-4">
                         <button onClick={resetLoginType} className="text-gray-400 hover:text-white text-sm hover:underline">
                             Back to role selection
                         </button>
@@ -224,6 +256,10 @@ const LoginPage = ({ setUser }) => {
                     loading={loading}
                     error={error}
                     setError={setError} // Pass setError to allow the modal to clear errors
+                    onForgotPassword={(fighter) => {
+                        setForgotPasswordRole('fighter');
+                        setShowForgotPassword(true);
+                    }}
                 />
             )}
         </div>

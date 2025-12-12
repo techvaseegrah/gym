@@ -1,2 +1,0 @@
-# This file is no longer needed as we've migrated to JavaScript-only face recognition
-# All Python dependencies have been removed

@@ -13,7 +13,7 @@ export const initSocket = (user) => {
   currentUser = user;
   
   // Connect to WebSocket server
-  socket = io('http://localhost:5000');
+  socket = io('http://localhost:5001');
 
   // Register user with server
   socket.emit('register_user', {

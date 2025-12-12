@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { FaTimes } from 'react-icons/fa';
 
-const LoginForm = ({ fighter, onLogin, onClose, loading, error, setError }) => {
+const LoginForm = ({ fighter, onLogin, onClose, loading, error, setError, onForgotPassword }) => {
     const [password, setPassword] = useState('');
 
     useEffect(() => {
@@ -15,6 +14,14 @@ const LoginForm = ({ fighter, onLogin, onClose, loading, error, setError }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         onLogin(password);
+    };
+
+    const handleForgotPasswordClick = () => {
+        // Close the current modal and trigger the forgot password flow
+        onClose();
+        if (onForgotPassword) {
+            onForgotPassword(fighter);
+        }
     };
 
     return (
@@ -63,6 +70,16 @@ const LoginForm = ({ fighter, onLogin, onClose, loading, error, setError }) => {
                     >
                         {loading ? 'Signing in...' : 'Sign in'}
                     </button>
+                    
+                    <div className="text-center mt-4">
+                        <button
+                            type="button"
+                            onClick={handleForgotPasswordClick}
+                            className="text-gray-400 hover:text-white text-sm hover:underline"
+                        >
+                            Forgot Password?
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
