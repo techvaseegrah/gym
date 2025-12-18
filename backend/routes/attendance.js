@@ -3,6 +3,7 @@ const router = express.Router();
 const Attendance = require('../models/Attendance');
 const Settings = require('../models/Settings');
 const Fighter = require('../models/Fighter');
+const Subscription = require('../models/Subscription'); // Add Subscription model
 const auth = require('../middleware/authMiddleware');
 
 // Utility function to calculate distance between two coordinates in meters
@@ -76,6 +77,25 @@ const verifyLocation = async (userLocation) => {
     } catch (error) {
         console.error('Location verification error:', error.message);
         return { isValid: false, message: `Location verification failed: ${error.message}` };
+    }
+};
+
+// Utility function to check if fighter has active subscription
+const checkActiveSubscription = async (fighterId) => {
+    try {
+        const now = new Date();
+        const subscription = await Subscription.findOne({
+            fighterId: fighterId,
+            isActive: true,
+            startDate: { $lte: now },
+            endDate: { $gte: now },
+            status: 'paid'
+        });
+        
+        return subscription ? { hasSubscription: true, subscription } : { hasSubscription: false };
+    } catch (error) {
+        console.error('Subscription check error:', error.message);
+        return { hasSubscription: false, error: error.message };
     }
 };
 
@@ -302,6 +322,14 @@ router.post('/punch', auth, async (req, res) => {
         const fighterId = req.user.id;
         const { faceDescriptor, location } = req.body;
         
+        // Check if fighter has active subscription
+        const subscriptionCheck = await checkActiveSubscription(fighterId);
+        if (!subscriptionCheck.hasSubscription) {
+            return res.status(403).json({ 
+                msg: 'Attendance can only be marked with an active subscription. Please renew your subscription.' 
+            });
+        }
+        
         // Log the face descriptor details
         if (faceDescriptor) {
             console.log('Face descriptor type:', typeof faceDescriptor);
@@ -495,6 +523,14 @@ router.post('/rfid-status', auth, async (req, res) => {
         if (fighter._id.toString() !== req.user.id) {
             return res.status(403).json({ msg: 'This RFID does not belong to you.' });
         }
+        
+        // Check if fighter has active subscription
+        const subscriptionCheck = await checkActiveSubscription(fighter._id);
+        if (!subscriptionCheck.hasSubscription) {
+            return res.status(403).json({ 
+                msg: 'Attendance can only be marked with an active subscription. Please renew your subscription.' 
+            });
+        }
 
         // If location is provided, verify it
         if (location) {
@@ -550,6 +586,14 @@ router.get('/me/status', auth, async (req, res) => {
         const fighter = await Fighter.findById(req.user.id).select('name fighterBatchNo');
         if (!fighter) {
             return res.status(404).json({ msg: 'Fighter not found' });
+        }
+        
+        // Check if fighter has active subscription
+        const subscriptionCheck = await checkActiveSubscription(req.user.id);
+        if (!subscriptionCheck.hasSubscription) {
+            return res.status(403).json({ 
+                msg: 'Attendance can only be marked with an active subscription. Please renew your subscription.' 
+            });
         }
 
         // Define the start and end of the current day to ensure punches are paired correctly
