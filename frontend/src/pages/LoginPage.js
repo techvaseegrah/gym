@@ -246,6 +246,12 @@ const LoginPage = ({ setUser }) => {
                 )}
                 {/* --- End of New Conditional Rendering Logic --- */}
 
+                {/* Legal Links */}
+                <div className="flex justify-center space-x-6 mt-8 text-sm text-gray-500">
+                    <a href="/terms-and-conditions" className="hover:text-gray-700 hover:underline">Terms & Conditions</a>
+                    <a href="/privacy-policy" className="hover:text-gray-700 hover:underline">Privacy Policy</a>
+                    <a href="/cookie-policy" className="hover:text-gray-700 hover:underline">Cookie Policy</a>
+                </div>
             </div>
             {/* --- ADD THIS AT THE END OF THE MAIN DIV --- */}
             {isPasswordModalOpen && selectedFighter && (
@@ -267,3 +273,4 @@ const LoginPage = ({ setUser }) => {
 };
 
 export default LoginPage;
+
