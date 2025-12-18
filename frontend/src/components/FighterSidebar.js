@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaCalendarCheck, FaSignOutAlt, FaChartLine, FaEnvelope } from 'react-icons/fa';
+import { FaHome, FaCalendarCheck, FaSignOutAlt, FaChartLine, FaEnvelope, FaCreditCard } from 'react-icons/fa';
 import api from '../api/api';
 
 const FighterSidebar = ({ handleLogout, closeSidebar }) => {
@@ -45,6 +45,12 @@ const FighterSidebar = ({ handleLogout, closeSidebar }) => {
                 </NavLink>
                 <NavLink to="/fighter/level" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`} onClick={closeSidebar}>
                     <FaChartLine className="mr-3" /> Fighter Level
+                </NavLink>
+                <NavLink to="/fighter/subscription" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`} onClick={closeSidebar}>
+                    <FaCreditCard className="mr-3" /> Subscription
+                </NavLink>
+                <NavLink to="/fighter/subscription-report" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`} onClick={closeSidebar}>
+                    <FaCreditCard className="mr-3" /> Payment Reports
                 </NavLink>
                 <NavLink to="/fighter/ask-doubt" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`} onClick={closeSidebar}>
                     <FaEnvelope className="mr-3" /> Ask Doubt
