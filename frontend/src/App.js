@@ -1,4 +1,3 @@
-
 // client/src/App.js
 
 import React, { useState, useEffect } from 'react';
@@ -21,6 +20,12 @@ import FighterLevelPage from './pages/FighterLevelPage';
 import FighterLevelViewPage from './pages/FighterLevelViewPage';
 import FighterFaceRecognitionPage from './pages/FighterFaceRecognitionPage';
 import AskDoubtPage from './pages/AskDoubtPage';
+import FighterSubscriptionPage from './pages/FighterSubscriptionPage'; // Add subscription page
+import AdminSubscriptionManagementPage from './pages/AdminSubscriptionManagementPage'; // Add admin subscription page
+import FighterSubscriptionReportPage from './pages/FighterSubscriptionReportPage'; // Add fighter subscription report page
+import TermsAndConditionsPage from './pages/TermsAndConditionsPage'; // Add terms page
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'; // Add privacy policy page
+import CookiePolicyPage from './pages/CookiePolicyPage'; // Add cookie policy page
 
 // Import Components
 import AdminSidebar from './components/AdminSidebar';
@@ -201,7 +206,7 @@ const App = () => {
     return (
         <Router>
             <Routes>
-                {/* --- THIS IS THE CORRECTED LOGIN ROUTE --- */}
+                {/* --- THIS IS THE CORRECTED_LOGIN ROUTE --- */}
                 {/* It now passes the 'user' state down and always renders LoginPage */
                 }
                 <Route path="/" element={<LoginPage setUser={setUser} user={user} />} />
@@ -215,6 +220,7 @@ const App = () => {
                 <Route path="/admin/fighter/:id" element={<ProtectedRoute role="admin"><AdminLayout><ViewFighterDetailsPage /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/attendance" element={<ProtectedRoute role="admin"><AdminLayout><AdminAttendancePage /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute role="admin"><AdminLayout><AdminSettingsPage /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/subscriptions" element={<ProtectedRoute role="admin"><AdminLayout><AdminSubscriptionManagementPage /></AdminLayout></ProtectedRoute>} /> {/* Add admin subscription route */}
                 <Route path="/fighter/attendance/face" element={<ProtectedRoute role="fighter"><FighterLayout><FighterFaceRecognitionPage /></FighterLayout></ProtectedRoute>} />
                 <Route path="/admin/ask-doubt" element={<ProtectedRoute role="admin"><AdminLayout><AskDoubtPage /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/fighter-level" element={<ProtectedRoute role="admin"><AdminLayout><FighterLevelPage /></AdminLayout></ProtectedRoute>} />
@@ -223,6 +229,11 @@ const App = () => {
                 <Route path="/fighter/complete-profile" element={<ProtectedRoute role="fighter"><CompleteProfilePage /></ProtectedRoute>} />
                 <Route path="/fighter" element={<ProtectedRoute role="fighter"><FighterLayout><FighterHomePage user={user} /></FighterLayout></ProtectedRoute>} />
                 <Route path="/fighter/attendance" element={<ProtectedRoute role="fighter"><FighterLayout><FighterAttendancePage user={user} /></FighterLayout></ProtectedRoute>} />
+                <Route path="/fighter/subscription" element={<ProtectedRoute role="fighter"><FighterLayout><FighterSubscriptionPage /></FighterLayout></ProtectedRoute>} /> {/* Add fighter subscription route */}
+                <Route path="/fighter/subscription-report" element={<ProtectedRoute role="fighter"><FighterLayout><FighterSubscriptionReportPage /></FighterLayout></ProtectedRoute>} /> {/* Add fighter subscription report route */}
+                <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                <Route path="/cookie-policy" element={<CookiePolicyPage />} />
             </Routes>
         </Router>
     );
