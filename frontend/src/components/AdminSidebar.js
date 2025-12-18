@@ -14,7 +14,8 @@ import {
     FaAngleUp,
     FaChartLine,
     FaQuestionCircle ,
-    FaEnvelope
+    FaEnvelope,
+    FaCreditCard
 } from 'react-icons/fa';
 
 const AdminSidebar = ({ handleLogout, closeSidebar }) => {
@@ -97,6 +98,13 @@ const AdminSidebar = ({ handleLogout, closeSidebar }) => {
                     onClick={handleLinkClick}
                 >
                     <FaCalendarCheck className="mr-3" /> Attendance
+                </NavLink>
+                <NavLink
+                    to="/admin/subscriptions"
+                    className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                    onClick={handleLinkClick}
+                >
+                    <FaCreditCard className="mr-3" /> Subscriptions
                 </NavLink>
                 <NavLink
                     to="/admin/ask-doubt"
