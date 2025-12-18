@@ -15,6 +15,17 @@ const FighterAttendancePage = () => {
     const [isRfidModalOpen, setIsRfidModalOpen] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [confirmModalData, setConfirmModalData] = useState(null);
+    // Add state for popup notification
+    const [popup, setPopup] = useState({ show: false, message: '', type: '' });
+
+    // Function to show popup notification
+    const showPopup = (message, type = 'info') => {
+        setPopup({ show: true, message, type });
+        // Auto hide popup after 5 seconds
+        setTimeout(() => {
+            setPopup({ show: false, message: '', type: '' });
+        }, 5000);
+    };
 
     const recalculateDuration = (day) => {
         // Use the server-calculated duration directly
@@ -100,10 +111,18 @@ const FighterAttendancePage = () => {
                 setMessage(prev => `${prev} Note: ${locationError}`);
             }
             
+            // Show success popup
+            showPopup(data.msg, 'success');
+            
             await fetchAndProcessAttendance(); // Refresh the attendance list
         } catch (err) {
             const errorMsg = err.response?.data?.msg || 'An error occurred.';
             setMessage(`Error: ${errorMsg}`);
+            
+            // Show error popup for subscription-related errors
+            if (errorMsg.includes('subscription')) {
+                showPopup(errorMsg, 'error');
+            }
         } finally {
             setPunching(false);
         }
@@ -123,6 +142,11 @@ const FighterAttendancePage = () => {
             const errorMsg = err.response?.data?.msg || 'An error occurred.';
             setMessage(`Error: ${errorMsg}`);
             setIsRfidModalOpen(false); // Close RFID modal on error
+            
+            // Show error popup for subscription-related errors
+            if (errorMsg.includes('subscription')) {
+                showPopup(errorMsg, 'error');
+            }
         } finally {
             setPunching(false);
         }
@@ -140,6 +164,22 @@ const FighterAttendancePage = () => {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
+            {/* Popup Notification */}
+            {popup.show && (
+                <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-opacity duration-300 ${
+                    popup.type === 'success' ? 'bg-green-500 text-white' : 
+                    popup.type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+                }`}>
+                    <div className="flex items-center">
+                        <span className="mr-2">
+                            {popup.type === 'success' ? '✅' : 
+                             popup.type === 'error' ? '❌' : 'ℹ️'}
+                        </span>
+                        <span>{popup.message}</span>
+                    </div>
+                </div>
+            )}
+            
             <h1 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">My Attendance</h1>
 
             {/* Punch In/Out Section */}
