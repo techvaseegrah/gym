@@ -10,9 +10,18 @@ const FighterDetails = () => {
     const { id } = useParams();
     const [fighterData, setFighterData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [subscriptions, setSubscriptions] = useState([]);
+    const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+    const [error, setError] = useState('');
 
     const technicalSkills = ['stance', 'jab', 'straight', 'left_hook', 'right_hook', 'thigh_kick', 'rib_kick', 'face_slap_kick', 'inner_kick', 'outer_kick', 'front_kick', 'rise_kick', 'boxing_movements', 'push_ups', 'cambo'];
     const skillAdvantages = ['stamina', 'speed', 'flexibility', 'power', 'martial_arts_knowledge', 'discipline'];
+
+    const planDetails = {
+        monthly: { name: 'Monthly Plan', price: 500 },
+        quarterly: { name: 'Quarterly Plan', price: 1200 },
+        yearly: { name: 'Yearly Plan', price: 4800 }
+    };
 
     useEffect(() => {
         const fetchFighterDetails = async () => {
@@ -27,6 +36,43 @@ const FighterDetails = () => {
         };
         fetchFighterDetails();
     }, [id]);
+
+    useEffect(() => {
+        const fetchSubscriptions = async () => {
+            try {
+                setLoadingSubscriptions(true);
+                const res = await api.get(`/subscriptions/fighter/${id}`);
+                setSubscriptions(res.data);
+                setLoadingSubscriptions(false);
+            } catch (err) {
+                console.error('Error fetching subscriptions:', err);
+                setError('Failed to fetch subscription details');
+                setLoadingSubscriptions(false);
+            }
+        };
+        
+        if (id) {
+            fetchSubscriptions();
+        }
+    }, [id]);
+
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'paid': return 'bg-green-100 text-green-800';
+            case 'created': return 'bg-yellow-100 text-yellow-800';
+            case 'expired': return 'bg-red-100 text-red-800';
+            case 'cancelled': return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
 
     if (loading) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100">Loading fighter details...</div>;
@@ -137,6 +183,62 @@ const FighterDetails = () => {
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* Subscription Information */}
+                    <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                        <h2 className="text-2xl font-bold border-b-2 border-red-500 pb-2 mb-6 text-white">Subscription Information</h2>
+                        {error && (
+                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                                {error}
+                            </div>
+                        )}
+                        
+                        {loadingSubscriptions ? (
+                            <div className="flex justify-center items-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                                <span className="ml-2 text-gray-300">Loading subscription information...</span>
+                            </div>
+                        ) : subscriptions.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-700">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Plan</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Amount</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Period</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-700">
+                                        {subscriptions.map((sub) => (
+                                            <tr key={sub._id}>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                                                    {planDetails[sub.planType]?.name || sub.planType}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                    ₹{sub.amount}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                    {formatDate(sub.startDate)} - {formatDate(sub.endDate)}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(sub.status)}`}>
+                                                        {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                    {formatDate(sub.createdAt)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p className="text-gray-300 text-center py-4">No subscription history found for this fighter.</p>
+                        )}
                     </div>
 
                     {/* Assessment */}
