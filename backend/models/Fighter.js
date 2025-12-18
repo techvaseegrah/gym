@@ -84,7 +84,13 @@ const fighterSchema = new mongoose.Schema({
     assessment: { type: assessmentSchema, default: () => ({}) }, // Use the new schema
     
     faceEncodings: { type: mongoose.Schema.Types.Mixed }, //
-    profilePhoto: { type: String } // Store Base64 encoded image string
+    profilePhoto: { type: String }, // Store Base64 encoded image string
+    
+    // Subscription info
+    currentSubscription: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subscription'
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Fighter', fighterSchema);
