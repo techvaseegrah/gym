@@ -5,6 +5,13 @@ const http = require('http');
 const socketIo = require('socket.io');
 require('dotenv').config();
 
+// Debug environment variables
+console.log('Environment variables debug:');
+console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
+console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? '[SECRET_SET]' : 'NOT_SET');
+console.log('MONGO_URI:', process.env.MONGO_URI ? '[SET]' : 'NOT_SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? '[SET]' : 'NOT_SET');
+
 const app = express();
 
 // Create HTTP server
@@ -80,6 +87,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/doubts', require('./routes/doubts'));
 app.use('/api/forgot-password', require('./routes/forgotPassword'));
+app.use('/api/subscriptions', require('./routes/subscriptions')); // Add subscription routes
 
 // Global error handler
 app.use((err, req, res, next) => {
