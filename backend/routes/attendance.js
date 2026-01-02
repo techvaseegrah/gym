@@ -81,18 +81,145 @@ const verifyLocation = async (userLocation) => {
 };
 
 // Utility function to check if fighter has active subscription
+// For fighters on free plan, attendance is always available (indefinite plan)
+// For fighters on fixed commitment plan, attendance is available based on financial checkpoints
 const checkActiveSubscription = async (fighterId) => {
     try {
         const now = new Date();
+        
+        // First check if fighter has an active free plan subscription
+        // Free plan takes precedence over all other plans
+        const freeSubscription = await Subscription.findOne({
+            fighterId: fighterId,
+            planType: 'free',
+            isActive: true,
+            startDate: { $lte: now },
+            // For free plan, we don't check endDate as it's indefinite
+            status: 'paid'
+        });
+        
+        // If fighter has an active free plan, they can always mark attendance
+        if (freeSubscription) {
+            return { hasSubscription: true, subscription: freeSubscription, isFreePlan: true };
+        }
+        
+        // Check for fixed commitment plan with financial checkpoints
+        const fixedCommitmentSubscription = await Subscription.findOne({
+            fighterId: fighterId,
+            planType: 'fixed_commitment',
+            isActive: true,
+            startDate: { $lte: now },
+            endDate: { $gte: now },
+            status: { $in: ['partial_payment', 'paid'] }
+        });
+        
+        // Check for custom plan
+        const customSubscription = await Subscription.findOne({
+            fighterId: fighterId,
+            planType: 'custom',
+            isActive: true,
+            startDate: { $lte: now },
+            endDate: { $gte: now },
+            status: { $in: ['partial_payment', 'paid'] }
+        });
+        
+        // If fighter has an active fixed commitment plan, check financial checkpoints
+        if (fixedCommitmentSubscription) {
+            // Calculate days since subscription start
+            const startDate = new Date(fixedCommitmentSubscription.startDate);
+            const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+            
+            // Financial Checkpoints:
+            // Month 1 (Days 0-30): Grant access if paid at least ₹1000
+            if (daysSinceStart <= 30) {
+                if (fixedCommitmentSubscription.paidAmount >= 1000) {
+                    return { 
+                        hasSubscription: true, 
+                        subscription: fixedCommitmentSubscription, 
+                        isFixedCommitment: true,
+                        checkpoint: 'month1',
+                        accessAllowed: true
+                    };
+                } else {
+                    return { 
+                        hasSubscription: true, 
+                        subscription: fixedCommitmentSubscription, 
+                        isFixedCommitment: true,
+                        checkpoint: 'month1',
+                        accessAllowed: false,
+                        requiredAmount: 1000 - fixedCommitmentSubscription.paidAmount
+                    };
+                }
+            }
+            // Month 2 (Days 31-60): Grant access if paid at least ₹2500
+            else if (daysSinceStart <= 60) {
+                if (fixedCommitmentSubscription.paidAmount >= 2500) {
+                    return { 
+                        hasSubscription: true, 
+                        subscription: fixedCommitmentSubscription, 
+                        isFixedCommitment: true,
+                        checkpoint: 'month2',
+                        accessAllowed: true
+                    };
+                } else {
+                    return { 
+                        hasSubscription: true, 
+                        subscription: fixedCommitmentSubscription, 
+                        isFixedCommitment: true,
+                        checkpoint: 'month2',
+                        accessAllowed: false,
+                        requiredAmount: 2500 - fixedCommitmentSubscription.paidAmount
+                    };
+                }
+            }
+            // Month 3 (Days 61-90): Grant access if fully paid (₹4000)
+            else if (daysSinceStart <= 90) {
+                if (fixedCommitmentSubscription.paidAmount >= 4000) {
+                    return { 
+                        hasSubscription: true, 
+                        subscription: fixedCommitmentSubscription, 
+                        isFixedCommitment: true,
+                        checkpoint: 'month3',
+                        accessAllowed: true
+                    };
+                } else {
+                    return { 
+                        hasSubscription: true, 
+                        subscription: fixedCommitmentSubscription, 
+                        isFixedCommitment: true,
+                        checkpoint: 'month3',
+                        accessAllowed: false,
+                        requiredAmount: 4000 - fixedCommitmentSubscription.paidAmount
+                    };
+                }
+            }
+            // Beyond 90 days, subscription has expired
+            else {
+                return { hasSubscription: false };
+            }
+        }
+        
+        // If fighter has an active custom plan, grant unrestricted access regardless of payment amount
+        if (customSubscription) {
+            return { 
+                hasSubscription: true, 
+                subscription: customSubscription,
+                isCustomPlan: true,
+                accessAllowed: true
+            };
+        }
+        
+        // Otherwise, check for regular paid subscriptions
         const subscription = await Subscription.findOne({
             fighterId: fighterId,
             isActive: true,
             startDate: { $lte: now },
             endDate: { $gte: now },
-            status: 'paid'
+            status: 'paid',
+            planType: { $nin: ['free', 'fixed_commitment', 'custom'] } // Exclude free, fixed commitment, and custom plans
         });
         
-        return subscription ? { hasSubscription: true, subscription } : { hasSubscription: false };
+        return subscription ? { hasSubscription: true, subscription, isFreePlan: false } : { hasSubscription: false };
     } catch (error) {
         console.error('Subscription check error:', error.message);
         return { hasSubscription: false, error: error.message };
@@ -324,7 +451,31 @@ router.post('/punch', auth, async (req, res) => {
         
         // Check if fighter has active subscription
         const subscriptionCheck = await checkActiveSubscription(fighterId);
-        if (!subscriptionCheck.hasSubscription) {
+        
+        // For free plan fighters, attendance is always available
+        if (subscriptionCheck.isFreePlan) {
+            // Allow attendance
+        }
+        // For fixed commitment plan fighters, check financial checkpoints
+        else if (subscriptionCheck.isFixedCommitment) {
+            if (!subscriptionCheck.accessAllowed) {
+                return res.status(403).json({ 
+                    msg: `Attendance denied. You need to pay ₹${subscriptionCheck.requiredAmount} to meet the current financial checkpoint.` 
+                });
+            }
+            // If access is allowed, continue with attendance marking
+        }
+        // For custom plan fighters, check financial checkpoints
+        else if (subscriptionCheck.isCustomPlan) {
+            if (!subscriptionCheck.accessAllowed) {
+                return res.status(403).json({ 
+                    msg: `Attendance denied. You need to pay ₹${subscriptionCheck.requiredAmount} to meet the current financial requirement.` 
+                });
+            }
+            // If access is allowed, continue with attendance marking
+        }
+        // For other paid plan fighters, they need an active subscription
+        else if (!subscriptionCheck.hasSubscription) {
             return res.status(403).json({ 
                 msg: 'Attendance can only be marked with an active subscription. Please renew your subscription.' 
             });
@@ -526,7 +677,31 @@ router.post('/rfid-status', auth, async (req, res) => {
         
         // Check if fighter has active subscription
         const subscriptionCheck = await checkActiveSubscription(fighter._id);
-        if (!subscriptionCheck.hasSubscription) {
+        
+        // For free plan fighters, attendance is always available
+        if (subscriptionCheck.isFreePlan) {
+            // Allow attendance
+        }
+        // For fixed commitment plan fighters, check financial checkpoints
+        else if (subscriptionCheck.isFixedCommitment) {
+            if (!subscriptionCheck.accessAllowed) {
+                return res.status(403).json({ 
+                    msg: `Attendance denied. You need to pay ₹${subscriptionCheck.requiredAmount} to meet the current financial checkpoint.` 
+                });
+            }
+            // If access is allowed, continue with attendance marking
+        }
+        // For custom plan fighters, check financial checkpoints
+        else if (subscriptionCheck.isCustomPlan) {
+            if (!subscriptionCheck.accessAllowed) {
+                return res.status(403).json({ 
+                    msg: `Attendance denied. You need to pay ₹${subscriptionCheck.requiredAmount} to meet the current financial requirement.` 
+                });
+            }
+            // If access is allowed, continue with attendance marking
+        }
+        // For other paid plan fighters, they need an active subscription
+        else if (!subscriptionCheck.hasSubscription) {
             return res.status(403).json({ 
                 msg: 'Attendance can only be marked with an active subscription. Please renew your subscription.' 
             });
@@ -590,7 +765,31 @@ router.get('/me/status', auth, async (req, res) => {
         
         // Check if fighter has active subscription
         const subscriptionCheck = await checkActiveSubscription(req.user.id);
-        if (!subscriptionCheck.hasSubscription) {
+        
+        // For free plan fighters, attendance is always available
+        if (subscriptionCheck.isFreePlan) {
+            // Allow attendance
+        }
+        // For fixed commitment plan fighters, check financial checkpoints
+        else if (subscriptionCheck.isFixedCommitment) {
+            if (!subscriptionCheck.accessAllowed) {
+                return res.status(403).json({ 
+                    msg: `Attendance denied. You need to pay ₹${subscriptionCheck.requiredAmount} to meet the current financial checkpoint.` 
+                });
+            }
+            // If access is allowed, continue with attendance marking
+        }
+        // For custom plan fighters, check financial checkpoints
+        else if (subscriptionCheck.isCustomPlan) {
+            if (!subscriptionCheck.accessAllowed) {
+                return res.status(403).json({ 
+                    msg: `Attendance denied. You need to pay ₹${subscriptionCheck.requiredAmount} to meet the current financial requirement.` 
+                });
+            }
+            // If access is allowed, continue with attendance marking
+        }
+        // For other paid plan fighters, they need an active subscription
+        else if (!subscriptionCheck.hasSubscription) {
             return res.status(403).json({ 
                 msg: 'Attendance can only be marked with an active subscription. Please renew your subscription.' 
             });
@@ -930,6 +1129,32 @@ router.post('/admin/face-recognition', auth, async (req, res) => {
         }
 
         console.log(`Best match found: ${bestMatch.name} with distance ${lowestDistance}`);
+        
+        // For fighter role, check if they have active subscription
+        // Admins can bypass subscription check
+        if (req.user.role === 'fighter') {
+            const subscriptionCheck = await checkActiveSubscription(bestMatch._id);
+            
+            // For free plan fighters, attendance is always available
+            if (subscriptionCheck.isFreePlan) {
+                // Allow attendance
+            }
+            // For fixed commitment plan fighters, check financial checkpoints
+            else if (subscriptionCheck.isFixedCommitment) {
+                if (!subscriptionCheck.accessAllowed) {
+                    return res.status(403).json({ 
+                        msg: `Attendance denied. You need to pay ₹${subscriptionCheck.requiredAmount} to meet the current financial checkpoint.` 
+                    });
+                }
+                // If access is allowed, continue with attendance marking
+            }
+            // For paid plan fighters, they need an active subscription
+            else if (!subscriptionCheck.hasSubscription) {
+                return res.status(403).json({ 
+                    msg: 'Attendance can only be marked with an active subscription. Please renew your subscription.' 
+                });
+            }
+        }
         
         // If location is provided, verify it before marking attendance (same as Python implementation)
         if (location) {
