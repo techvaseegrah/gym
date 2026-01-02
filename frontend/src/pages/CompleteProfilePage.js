@@ -16,7 +16,7 @@ const CompleteProfilePage = () => {
         weight: '',
         bloodGroup: '',
         occupation: '',
-        package: 'monthly',
+        package: 'fixed_commitment',
         previousExperience: '',
         medicalIssue: '',
         motto: '',
@@ -95,9 +95,7 @@ const CompleteProfilePage = () => {
                             <input type="text" name="bloodGroup" placeholder="Blood Group" onChange={handleChange} className="input-style" />
                             <input type="text" name="occupation" placeholder="Occupation" onChange={handleChange} className="input-style" />
                             <select name="package" onChange={handleChange} className="input-style">
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly</option>
-                                <option value="yearly">Yearly</option>
+                                <option value="fixed_commitment">Quarterly Membership (₹4000)</option>
                             </select>
                             <input type="text" name="previousExperience" placeholder="Previous Martial Arts Experience?" onChange={handleChange} className="input-style" />
                              <textarea name="medicalIssue" placeholder="Any Medical Issues?" onChange={handleChange} className="input-style md:col-span-2" rows="2"></textarea>
