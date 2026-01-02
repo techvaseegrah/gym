@@ -1,7 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api.js';
 import { useParams } from 'react-router-dom';
+import api from '../api/api.js';
 import EnhancedLevelProgress from '../components/EnhancedLevelProgress';
+
+// Get user context by accessing the global user state from localStorage
+const getUserFromStorage = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        // In a real implementation, you'd decode the JWT token or make an API call
+        // For now, we'll use a simple approach by checking if token exists
+        // and assume the user role is stored in a global context or can be retrieved
+        try {
+            // Decode JWT token to get user info (simplified approach)
+            const tokenParts = token.split('.');
+            if (tokenParts.length === 3) {
+                const payload = JSON.parse(atob(tokenParts[1]));
+                return { role: payload.role, id: payload.id };
+            }
+        } catch (e) {
+            console.warn('Could not decode token');
+        }
+    }
+    return null;
+};
 
 // CoreLevelChart component has been replaced with EnhancedLevelProgress
 
@@ -13,14 +34,19 @@ const FighterDetails = () => {
     const [subscriptions, setSubscriptions] = useState([]);
     const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
     const [error, setError] = useState('');
+    // Payment widget state
+    const [showInstallmentForm, setShowInstallmentForm] = useState(false);
+    const [installmentAmount, setInstallmentAmount] = useState('');
+    const [processing, setProcessing] = useState(false);
+    const [paymentError, setPaymentError] = useState('');
 
     const technicalSkills = ['stance', 'jab', 'straight', 'left_hook', 'right_hook', 'thigh_kick', 'rib_kick', 'face_slap_kick', 'inner_kick', 'outer_kick', 'front_kick', 'rise_kick', 'boxing_movements', 'push_ups', 'cambo'];
     const skillAdvantages = ['stamina', 'speed', 'flexibility', 'power', 'martial_arts_knowledge', 'discipline'];
 
     const planDetails = {
-        monthly: { name: 'Monthly Plan', price: 500 },
-        quarterly: { name: 'Quarterly Plan', price: 1200 },
-        yearly: { name: 'Yearly Plan', price: 4800 }
+        free: { name: 'Free Plan', price: 0, description: 'Indefinite access to gym facilities' },
+        fixed_commitment: { name: 'Quarterly Membership', totalFee: 4000, description: 'Fixed 3-month package with flexible installments' },
+        custom: { name: 'Custom Plan', description: 'Custom fee and duration plan' }
     };
 
     useEffect(() => {
@@ -70,6 +96,228 @@ const FighterDetails = () => {
             case 'created': return 'bg-yellow-100 text-yellow-800';
             case 'expired': return 'bg-red-100 text-red-800';
             case 'cancelled': return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    // Function to get the current active subscription from the subscriptions list
+    const getCurrentSubscription = (subs) => {
+        if (!subs || subs.length === 0) return null;
+        
+        const now = new Date();
+        // Sort by creation date descending to get the most recent first
+        const sortedSubs = [...subs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        // First check for active paid subscriptions
+        for (const sub of sortedSubs) {
+            // Skip expired or cancelled subscriptions
+            if (sub.status === 'expired' || sub.status === 'cancelled') continue;
+            
+            // Check if subscription is currently active
+            const startDate = new Date(sub.startDate);
+            const endDate = new Date(sub.endDate);
+            
+            if (startDate <= now && endDate >= now) {
+                // For fixed commitment and custom plans, check if it has paid or partial_payment status
+                if ((sub.planType === 'fixed_commitment' || sub.planType === 'custom') && (sub.status === 'paid' || sub.status === 'partial_payment')) {
+                    return sub;
+                }
+                // For other plans, check if it's paid
+                else if (sub.planType !== 'fixed_commitment' && sub.planType !== 'custom' && sub.status === 'paid') {
+                    return sub;
+                }
+                // For free plans, they're always active if status is paid
+                else if (sub.planType === 'free' && sub.status === 'paid') {
+                    return sub;
+                }
+            }
+        }
+        
+        // If no active subscription found, return null
+        return null;
+    };
+
+    // Function to handle installment payment
+    const handleInstallmentPayment = async () => {
+        try {
+            setProcessing(true);
+            setPaymentError('');
+            
+            // Get current user to determine if admin or fighter
+            const currentUser = getUserFromStorage();
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            
+            // Get current subscription
+            const currentSub = getCurrentSubscription(subscriptions);
+            if (!currentSub) {
+                setPaymentError('No active subscription found');
+                setProcessing(false);
+                return;
+            }
+            
+            // Validate installment amount
+            const amount = parseFloat(installmentAmount);
+            if (!amount || amount <= 0) {
+                setPaymentError('Please enter a valid installment amount');
+                setProcessing(false);
+                return;
+            }
+            
+            if (amount > currentSub.remainingBalance) {
+                setPaymentError(`Installment amount cannot exceed remaining balance of ₹${currentSub.remainingBalance}`);
+                setProcessing(false);
+                return;
+            }
+            
+            // Determine which endpoints to use based on user role
+            const makeInstallmentEndpoint = isAdmin 
+                ? '/subscriptions/admin-make-installment' 
+                : '/subscriptions/make-installment';
+            const verifyInstallmentEndpoint = isAdmin 
+                ? '/subscriptions/admin-verify-installment' 
+                : '/subscriptions/verify-installment';
+            
+            // Create installment order
+            const orderRes = await api.post(makeInstallmentEndpoint, {
+                subscriptionId: currentSub._id,
+                installmentAmount: amount
+            });
+            
+            const { orderId, amount: orderAmount, currency, subscriptionId } = orderRes.data;
+            
+            // Check if Razorpay is loaded
+            if (!window.Razorpay) {
+                throw new Error('Razorpay SDK not loaded. Please refresh the page and try again.');
+            }
+            
+            // Initialize Razorpay
+            const options = {
+                key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+                amount: orderAmount,
+                currency: currency,
+                name: 'Mutants Academy & Ashuras Tribe',
+                description: `Installment Payment for ${planDetails[currentSub.planType]?.name || currentSub.planType}`,
+                order_id: orderId,
+                handler: async function (response) {
+                    try {
+                        // Verify installment payment using appropriate endpoint
+                        await api.post(verifyInstallmentEndpoint, {
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature,
+                            subscriptionId: subscriptionId
+                        });
+                        
+                        // Close the installment form
+                        setShowInstallmentForm(false);
+                        setInstallmentAmount('');
+                        
+                        // Refresh subscription data
+                        const res = await api.get(`/subscriptions/fighter/${id}`);
+                        setSubscriptions(res.data);
+                        
+                        // Show success message
+                        alert('Installment payment successful!');
+                    } catch (err) {
+                        console.error('Error verifying installment payment:', err);
+                        setPaymentError('Installment payment verification failed. Please contact support.');
+                    }
+                },
+                prefill: {
+                    name: fighterData?.name || '',
+                    email: '',
+                    contact: fighterData?.phNo || ''
+                },
+                theme: {
+                    color: '#3399cc'
+                },
+                modal: {
+                    ondismiss: function() {
+                        console.log('Installment payment dialog closed by user');
+                        setProcessing(false);
+                    }
+                }
+            };
+            
+            const rzp = new window.Razorpay(options);
+            
+            // Add error handler
+            rzp.on('payment.error', function(response) {
+                console.error('Razorpay Error:', response.error);
+                setPaymentError(`Payment failed: ${response.error.description}`);
+                setProcessing(false);
+            });
+            
+            rzp.open();
+        } catch (err) {
+            console.error('Error creating installment order:', err);
+            if (err.response) {
+                setPaymentError('Failed to initiate installment payment. Server error: ' + (err.response.data?.msg || err.response.data?.error || err.response.statusText || 'Unknown server error'));
+            } else if (err.request) {
+                setPaymentError('Failed to initiate installment payment. Network error: No response from server.');
+            } else {
+                setPaymentError('Failed to initiate installment payment. Error: ' + (err.message || 'Unknown error'));
+            }
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // Function to format period display, showing "Indefinite" for free plans
+    const formatPeriod = (startDate, endDate, planType) => {
+        if (!startDate || !endDate) return 'N/A';
+        
+        // For free plans, check if end date is in the distant future (99+ years)
+        if (planType === 'free') {
+            const end = new Date(endDate);
+            const now = new Date();
+            const yearsDifference = end.getFullYear() - now.getFullYear();
+            
+            // If end date is 90+ years in the future, consider it indefinite
+            if (yearsDifference >= 90) {
+                return `${formatDate(startDate)} - Indefinite`;
+            }
+        }
+        
+        return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    };
+
+    // Function to determine if subscription has balance due
+    const hasBalanceDue = (subscription) => {
+        return (subscription.planType === 'fixed_commitment' || subscription.planType === 'custom') && 
+               subscription.remainingBalance > 0 && 
+               (subscription.status === 'paid' || subscription.status === 'partial_payment');
+    };
+
+    // Function to get amount display for subscription
+    const getAmountDisplay = (sub) => {
+        if (sub.planType === 'fixed_commitment' || sub.planType === 'custom') {
+            return sub.paidAmount > 0 ? `₹${sub.paidAmount} of ₹${sub.totalFee}` : `₹0 of ₹${sub.totalFee}`;
+        } else {
+            return sub.amount > 0 ? `₹${sub.amount}` : 'N/A';
+        }
+    };
+
+    // Function to get status display text
+    const getStatusDisplayText = (status) => {
+        switch (status) {
+            case 'paid': return 'Active';
+            case 'created': return 'Inactive';
+            case 'expired': return 'Expired';
+            case 'cancelled': return 'Cancelled';
+            case 'partial_payment': return 'Partial Payment';
+            default: return status.charAt(0).toUpperCase() + status.slice(1);
+        }
+    };
+
+    // Function to get status color for different statuses
+    const getExtendedStatusColor = (status) => {
+        switch (status) {
+            case 'paid': return 'bg-green-100 text-green-800';
+            case 'created': return 'bg-yellow-100 text-yellow-800';
+            case 'expired': return 'bg-red-100 text-red-800';
+            case 'cancelled': return 'bg-gray-100 text-gray-800';
+            case 'partial_payment': return 'bg-orange-100 text-orange-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     };
@@ -218,14 +466,14 @@ const FighterDetails = () => {
                                                     {planDetails[sub.planType]?.name || sub.planType}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    ₹{sub.amount}
+                                                    {getAmountDisplay(sub)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                                     {formatDate(sub.startDate)} - {formatDate(sub.endDate)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(sub.status)}`}>
-                                                        {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
+                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getExtendedStatusColor(sub.status)}`}>
+                                                        {getStatusDisplayText(sub.status)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
@@ -239,8 +487,98 @@ const FighterDetails = () => {
                         ) : (
                             <p className="text-gray-300 text-center py-4">No subscription history found for this fighter.</p>
                         )}
+                        
+                        {/* Payment Widget for Fixed Commitment and Custom Plans */}
+                        {getCurrentSubscription(subscriptions) && hasBalanceDue(getCurrentSubscription(subscriptions)) && (
+                            <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                        <p className="text-yellow-800 font-medium">Balance Due: ₹{getCurrentSubscription(subscriptions).remainingBalance}</p>
+                                        <p className="text-yellow-700 text-sm">Make an installment payment to reduce the balance</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowInstallmentForm(true)}
+                                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded transition-colors"
+                                    >
+                                        Pay Installment
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
+                    {/* Installment Payment Form Modal */}
+                    {showInstallmentForm && getCurrentSubscription(subscriptions) && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+                                <div className="p-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-lg font-semibold text-gray-900">Pay Installment</h3>
+                                        <button 
+                                            onClick={() => {
+                                                setShowInstallmentForm(false);
+                                                setInstallmentAmount('');
+                                                setPaymentError('');
+                                            }}
+                                            className="text-gray-400 hover:text-gray-500"
+                                        >
+                                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    
+                                    {paymentError && (
+                                        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                                            {paymentError}
+                                        </div>
+                                    )}
+                                    
+                                    <div className="mb-4">
+                                        <p className="text-gray-600 mb-2">Current Balance: <span className="font-semibold">₹{getCurrentSubscription(subscriptions).remainingBalance}</span></p>
+                                        <p className="text-gray-600 mb-4">Total Paid: <span className="font-semibold">₹{getCurrentSubscription(subscriptions).paidAmount}</span> of ₹{getCurrentSubscription(subscriptions).totalFee}</p>
+                                        
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Installment Amount (₹)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={getCurrentSubscription(subscriptions).remainingBalance}
+                                            placeholder={`Enter amount (₹1-₹${getCurrentSubscription(subscriptions).remainingBalance})`}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                            value={installmentAmount || ''}
+                                            onChange={(e) => setInstallmentAmount(e.target.value)}
+                                        />
+                                        <p className="mt-2 text-sm text-gray-500">
+                                            Enter any amount between ₹1 and ₹{getCurrentSubscription(subscriptions).remainingBalance}
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="flex justify-end space-x-3">
+                                        <button
+                                            onClick={() => {
+                                                setShowInstallmentForm(false);
+                                                setInstallmentAmount('');
+                                                setPaymentError('');
+                                            }}
+                                            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleInstallmentPayment}
+                                            disabled={processing || !installmentAmount || installmentAmount <= 0 || installmentAmount > getCurrentSubscription(subscriptions).remainingBalance}
+                                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {processing ? 'Processing...' : 'Pay Installment'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
                     {/* Assessment */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
                          <div className="lg:col-span-3">
