@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
 const Fighter = require('../models/Fighter');
+const Subscription = require('../models/Subscription');
 const auth = require('../middleware/authMiddleware');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -85,8 +86,64 @@ router.post('/register', auth, async (req, res) => {
         
         console.log('Fighter registered successfully:', fighter.email, 'ID:', fighter._id);
         
+        // STRICT CHECK: Prevent creating default subscription if fighter has ANY active subscriptions or unpaid balances
+        // First check for active subscriptions
+        const activeSubscriptions = await Subscription.find({
+            fighterId: fighter._id,
+            isActive: true,
+            endDate: { $gte: new Date() }
+        });
+        
+        // If there are active subscriptions, don't create default subscription
+        if (activeSubscriptions.length > 0) {
+            console.log('Not creating default subscription due to existing active subscriptions');
+        } else {
+            // Check for unpaid subscriptions (both active and expired)
+            const unpaidSubscriptions = await Subscription.find({
+                fighterId: fighter._id,
+                $expr: { $lt: ['$paidAmount', '$totalFee'] }, // With unpaid balances
+                $or: [
+                    { 
+                        // Active subscriptions (within duration)
+                        isActive: true,
+                        endDate: { $gte: new Date() }
+                    },
+                    { 
+                        // Expired subscriptions (past duration)
+                        endDate: { $lt: new Date() }
+                    }
+                ]
+            });
+            
+            // Only create default subscription if no unpaid subscriptions exist
+            if (unpaidSubscriptions.length === 0) {
+                // Automatically create a default subscription for the fighter
+                const startDate = new Date();
+                const endDate = new Date();
+                endDate.setMonth(endDate.getMonth() + 3); // 3-month subscription
+                
+                const subscription = new Subscription({
+                    fighterId: fighter._id,
+                    planType: 'fixed_commitment',
+                    totalFee: 4000,
+                    paidAmount: 0,
+                    remainingBalance: 4000,
+                    startDate: startDate,
+                    endDate: endDate,
+                    isActive: false, // Not active until payment is made
+                    status: 'created'
+                });
+                
+                await subscription.save();
+            } else {
+                console.log('Not creating default subscription due to unpaid subscriptions');
+            }
+        }
+        
+        console.log('Default subscription created for fighter:', fighter._id);
+        
         res.status(201).json({ 
-            msg: 'Fighter registered successfully', 
+            msg: 'Fighter registered successfully with default subscription', 
             fighter: { 
                 id: fighter._id, 
                 name: fighter.name, 
