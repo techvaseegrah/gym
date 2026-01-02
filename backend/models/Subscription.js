@@ -8,12 +8,41 @@ const subscriptionSchema = new mongoose.Schema({
     },
     planType: {
         type: String,
-        enum: ['monthly', 'quarterly', 'yearly'],
-        required: true
+        enum: ['free', 'fixed_commitment', 'custom'],
+        required: true,
+        default: 'fixed_commitment'
     },
-    amount: {
+    // For fixed commitment model - total fee for the 3-month package
+    totalFee: {
         type: Number,
-        required: true
+        default: 4000
+    },
+    // How much has been paid so far
+    paidAmount: {
+        type: Number,
+        default: 0
+    },
+    // Remaining balance to be paid
+    remainingBalance: {
+        type: Number,
+        default: 4000
+    },
+    // Track payment history for audit trail
+    paymentHistory: [{
+        amount: Number,
+        date: Date,
+        razorpayPaymentId: String,
+        razorpayOrderId: String,
+        razorpaySignature: String
+    }],
+    // Track number of installments made
+    installmentCount: {
+        type: Number,
+        default: 0
+    },
+    maxInstallments: {
+        type: Number,
+        default: 4
     },
     razorpayOrderId: {
         type: String,
@@ -39,7 +68,7 @@ const subscriptionSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['created', 'paid', 'expired', 'cancelled'],
+        enum: ['created', 'paid', 'partial_payment', 'expired', 'cancelled'],
         default: 'created'
     }
 }, { timestamps: true });
