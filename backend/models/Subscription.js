@@ -70,7 +70,23 @@ const subscriptionSchema = new mongoose.Schema({
         type: String,
         enum: ['created', 'paid', 'partial_payment', 'expired', 'cancelled'],
         default: 'created'
+    },
+    // Duration in months for the subscription
+    duration: {
+        type: Number,
+        default: 3 // Default to 3 months for fixed commitment plans
     }
 }, { timestamps: true });
+
+// Add indexes for better query performance
+subscriptionSchema.index({ fighterId: 1 });
+subscriptionSchema.index({ planType: 1 });
+subscriptionSchema.index({ status: 1 });
+subscriptionSchema.index({ startDate: 1 });
+subscriptionSchema.index({ endDate: 1 });
+subscriptionSchema.index({ isActive: 1 });
+subscriptionSchema.index({ fighterId: 1, status: 1 });
+subscriptionSchema.index({ fighterId: 1, isActive: 1 });
+subscriptionSchema.index({ createdAt: -1 }); // For sorting
 
 module.exports = mongoose.model('Subscription', subscriptionSchema);

@@ -37,19 +37,9 @@ router.post('/register', auth, async (req, res) => {
     }
     
     // Validate department if provided
-    if (department) {
-        // Get all valid departments from the database instead of hardcoded list
-        const validDepartments = await Department.find({}).select('name').lean();
-        const validDepartmentNames = validDepartments.map(dept => dept.name);
-        // If no departments exist in DB, allow 'senior' and 'seniors' as fallbacks
-        if (validDepartmentNames.length === 0) {
-            const fallbackDepartments = ['senior', 'seniors'];
-            if (!fallbackDepartments.includes(department)) {
-                return res.status(400).json({ msg: 'Invalid department. No departments found in system, only allowed: senior, seniors' });
-            }
-        } else if (!validDepartmentNames.includes(department)) {
-            return res.status(400).json({ msg: 'Invalid department. Must be one of: ' + validDepartmentNames.join(', ') });
-        }
+    const validDepartments = ['seniors', 'senior', 'junior', 'silambam', 'bharatanatyam'];
+    if (department && !validDepartments.includes(department)) {
+        return res.status(400).json({ msg: 'Invalid department. Must be one of: seniors, senior, junior, silambam, bharatanatyam' });
     }
     
     try {
@@ -212,72 +202,11 @@ router.get('/me', auth, async (req, res) => {
         return res.status(403).json({ msg: 'Access denied' });
     }
     try {
-        const fighter = await Fighter.findById(req.user.id)
-            .select('-password')
-            .populate('department', 'name')
-            .populate({
-                path: 'currentSubscription',
-                model: 'Subscription'
-            });
+        const fighter = await Fighter.findById(req.user.id).select('-password').populate('department', 'name');
         if (!fighter) {
             return res.status(404).json({ msg: 'Fighter not found' });
         }
-        
-        // Convert to plain object to ensure all fields are accessible
-        const fighterData = fighter.toObject();
-        
-        // Ensure department is properly formatted
-        if (fighterData.department && typeof fighterData.department === 'object') {
-            fighterData.department = fighterData.department.name;
-        } else if (!fighterData.department) {
-            fighterData.department = 'Seniors'; // Default value
-        }
-        
-        // Ensure basic fields exist but preserve actual null/undefined values
-        // Let frontend handle display of missing data
-        if (fighterData.fighterBatchNo === undefined) {
-            fighterData.fighterBatchNo = null;
-        }
-        if (fighterData.rfid === undefined) {
-            fighterData.rfid = null;
-        }
-        if (fighterData.dateOfJoining === undefined) {
-            fighterData.dateOfJoining = null;
-        }
-        if (fighterData.height === undefined) {
-            fighterData.height = null;
-        }
-        if (fighterData.weight === undefined) {
-            fighterData.weight = null;
-        }
-        if (fighterData.bloodGroup === undefined) {
-            fighterData.bloodGroup = null;
-        }
-        if (fighterData.phNo === undefined) {
-            fighterData.phNo = null;
-        }
-        if (fighterData.occupation === undefined) {
-            fighterData.occupation = null;
-        }
-        if (fighterData.address === undefined) {
-            fighterData.address = null;
-        }
-        if (!fighterData.goals || !Array.isArray(fighterData.goals)) {
-            fighterData.goals = [];
-        }
-        if (fighterData.achievements === undefined) {
-            fighterData.achievements = null;
-        }
-        if (fighterData.motto === undefined) {
-            fighterData.motto = null;
-        }
-        
-        // Since subscription is already populated via populate() in the query, use it directly
-        if (fighter.currentSubscription) {
-            fighterData.currentSubscription = fighter.currentSubscription;
-        }
-        
-        res.json(fighterData);
+        res.json(fighter);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -380,12 +309,7 @@ router.get('/roster', auth, async (req, res) => {
         return res.status(403).json({ msg: 'Access denied' });
     }
     try {
-        const fighters = await Fighter.find({ role: 'fighter' })
-            .select('-password')
-            .populate({
-                path: 'currentSubscription',
-                model: 'Subscription'
-            });
+        const fighters = await Fighter.find({ role: 'fighter' }).select('-password');
         res.json(fighters);
     } catch (err) {
         console.error(err.message);
@@ -418,12 +342,7 @@ router.get('/:id', auth, async (req, res) => {
         return res.status(403).json({ msg: 'Access denied' });
     }
     try {
-        const fighter = await Fighter.findById(req.params.id)
-            .select('-password')
-            .populate({
-                path: 'currentSubscription',
-                model: 'Subscription'
-            });
+        const fighter = await Fighter.findById(req.params.id).select('-password');
         if (!fighter) {
             return res.status(404).json({ msg: 'Fighter not found' });
         }
@@ -481,19 +400,12 @@ router.put('/:id', auth, async (req, res) => {
         
         // Update department if provided
         if (department !== undefined) {
-            // Get all valid departments from the database instead of hardcoded list
-            const validDepartments = await Department.find({}).select('name').lean();
-            const validDepartmentNames = validDepartments.map(dept => dept.name);
-            // If no departments exist in DB, allow 'senior' and 'seniors' as fallbacks
-            if (validDepartmentNames.length === 0) {
-                const fallbackDepartments = ['senior', 'seniors'];
-                if (!fallbackDepartments.includes(department)) {
-                    return res.status(400).json({ msg: 'Invalid department. No departments found in system, only allowed: senior, seniors' });
-                }
-            } else if (!validDepartmentNames.includes(department)) {
-                return res.status(400).json({ msg: 'Invalid department. Must be one of: ' + validDepartmentNames.join(', ') });
+            const validDepartments = ['seniors', 'senior', 'junior', 'silambam', 'bharatanatyam'];
+            if (validDepartments.includes(department)) {
+                fighter.department = department;
+            } else {
+                return res.status(400).json({ msg: 'Invalid department. Must be one of: seniors, senior, junior, silambam, bharatanatyam' });
             }
-            fighter.department = department;
         }
         
         // Update profile photo if provided
@@ -561,44 +473,6 @@ router.get('/with-face-data', auth, async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
-    }
-});
-
-// @route   PUT api/fighters/me/profile-photo
-// @desc    Update current fighter's profile photo
-// @access  Private (Fighter only)
-router.put('/me/profile-photo', auth, async (req, res) => {
-    if (req.user.role !== 'fighter') {
-        return res.status(403).json({ msg: 'Access denied' });
-    }
-    
-    try {
-        const { profilePhoto } = req.body;
-        
-        if (!profilePhoto) {
-            return res.status(400).json({ msg: 'Profile photo is required' });
-        }
-        
-        const fighter = await Fighter.findByIdAndUpdate(
-            req.user.id,
-            { profilePhoto },
-            { new: true }
-        ).select('-password');
-        
-        if (!fighter) {
-            return res.status(404).json({ msg: 'Fighter not found' });
-        }
-        
-        res.json({ 
-            msg: 'Profile photo updated successfully', 
-            fighter: {
-                ...fighter.toObject(),
-                profilePhoto: fighter.profilePhoto
-            }
-        });
-    } catch (err) {
-        console.error('Profile photo update error:', err.message);
-        res.status(500).json({ msg: 'Server Error: ' + err.message });
     }
 });
 

@@ -90,7 +90,21 @@ const fighterSchema = new mongoose.Schema({
     currentSubscription: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Subscription'
+    },
+    
+    // Department field
+    department: {
+        type: String,
+        default: 'senior', // Make senior the default department
+        required: false  // Allow any department name
     }
 }, { timestamps: true });
+
+// Add indexes for better query performance
+fighterSchema.index({ rfid: 1 });
+fighterSchema.index({ email: 1 });
+fighterSchema.index({ department: 1 });
+fighterSchema.index({ name: 1 });
+fighterSchema.index({ dateOfJoining: -1 });
 
 module.exports = mongoose.model('Fighter', fighterSchema);

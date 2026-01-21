@@ -284,7 +284,11 @@ router.post('/admin-create', auth, async (req, res) => {
             subscriptionData.remainingBalance = 4000 - (initialPaymentAmount || 0);
             
             // Update status based on payment amount
-            if (subscriptionData.paidAmount >= 4000) {
+            // If admin explicitly sets status to 'paid', respect that and make it active
+            if (status === 'paid') {
+                subscriptionData.status = 'paid';
+                subscriptionData.isActive = true;
+            } else if (subscriptionData.paidAmount >= 4000) {
                 subscriptionData.status = 'paid';
                 subscriptionData.isActive = true;
             } else if (subscriptionData.paidAmount > 0) {
@@ -334,7 +338,11 @@ router.post('/admin-create', auth, async (req, res) => {
             subscriptionData.remainingBalance = customFee - (initialPaymentAmount || 0);
             
             // Update status based on payment amount
-            if (subscriptionData.paidAmount >= customFee) {
+            // If admin explicitly sets status to 'paid', respect that and make it active
+            if (status === 'paid') {
+                subscriptionData.status = 'paid';
+                subscriptionData.isActive = true;
+            } else if (subscriptionData.paidAmount >= customFee) {
                 subscriptionData.status = 'paid';
                 subscriptionData.isActive = true;
             } else if (subscriptionData.paidAmount > 0) {
@@ -362,8 +370,21 @@ router.post('/admin-create', auth, async (req, res) => {
         
         console.log('Subscription object to save:', JSON.stringify(subscription, null, 2));
         console.log('Saving subscription');
-        await subscription.save();
+                await subscription.save();
         console.log('Subscription saved successfully');
+        
+        // Update the fighter's currentSubscription field to point to this new subscription
+        try {
+            await Fighter.findByIdAndUpdate(
+                fighterId,
+                { currentSubscription: subscription._id },
+                { new: true }
+            );
+            console.log(`Updated fighter ${fighterId} to point to new subscription ${subscription._id}`);
+        } catch (updateErr) {
+            console.error('Error updating fighter\'s currentSubscription field:', updateErr.message);
+            // Don't fail the entire operation, just log the error
+        }
         
         res.json({ msg: 'Subscription created successfully', subscription });
     } catch (err) {
@@ -608,7 +629,20 @@ router.post('/verify-payment', auth, async (req, res) => {
             subscription.installmentCount += 1;
         }
         
-        await subscription.save();
+                await subscription.save();
+        
+        // Update the fighter's currentSubscription field to point to this subscription
+        try {
+            await Fighter.findByIdAndUpdate(
+                subscription.fighterId,
+                { currentSubscription: subscription._id },
+                { new: true }
+            );
+            console.log(`Updated fighter ${subscription.fighterId} to point to subscription ${subscription._id} after payment`);
+        } catch (updateErr) {
+            console.error('Error updating fighter\'s currentSubscription field after payment:', updateErr.message);
+            // Don't fail the entire operation, just log the error
+        }
         
         res.json({ msg: 'Payment verified successfully', subscription });
     } catch (err) {
@@ -1138,6 +1172,19 @@ router.post('/admin-verify-installment', auth, async (req, res) => {
         
         await subscription.save();
         
+        // Update the fighter's currentSubscription field to point to this subscription
+        try {
+            await Fighter.findByIdAndUpdate(
+                subscription.fighterId,
+                { currentSubscription: subscription._id },
+                { new: true }
+            );
+            console.log(`Updated fighter ${subscription.fighterId} to point to subscription ${subscription._id} after admin installment payment`);
+        } catch (updateErr) {
+            console.error('Error updating fighter\'s currentSubscription field after admin installment payment:', updateErr.message);
+            // Don't fail the entire operation, just log the error
+        }
+        
         res.json({ msg: 'Installment payment verified successfully', subscription });
     } catch (err) {
         console.error('Error verifying admin installment payment:', err.message);
@@ -1200,6 +1247,7 @@ router.get('/fighter/:fighterId', auth, async (req, res) => {
         }
         
         const subscriptions = await Subscription.find({ fighterId: req.params.fighterId })
+            .populate('fighterId', 'name rfid department')
             .sort({ createdAt: -1 });
         
         res.json(subscriptions);
@@ -1208,6 +1256,133 @@ router.get('/fighter/:fighterId', auth, async (req, res) => {
         res.status(500).json({ msg: 'Server Error' });
     }
 });
+
+// @route   GET /api/subscriptions/fighters-with-subscriptions
+// @desc    Get all fighters with their current subscription information (optimized for admin panel)
+// @access  Private (Admin)
+router.get('/fighters-with-subscriptions', auth, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ msg: 'Access denied' });
+        }
+        
+        // Get query parameters for pagination
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        
+        // Get filter parameters
+        const { planType, status, search, department } = req.query;
+        
+        // Build fighter query
+        const fighterQuery = {};
+        if (department) {
+            fighterQuery.department = department;
+        }
+        
+        // Add search functionality
+        if (search) {
+            fighterQuery.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { rfid: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        // Get total count of fighters before pagination
+        const total = await Fighter.countDocuments(fighterQuery);
+        
+        // Get fighters with pagination
+        let fighters = await Fighter.find(fighterQuery)
+            .skip(skip)
+            .limit(limit)
+            .sort({ name: 1 }) // Sort by name for consistency
+            .lean();
+        
+        // Get the fighter IDs to query subscriptions more efficiently
+        const fighterIds = fighters.map(fighter => fighter._id);
+        
+        // Get only subscriptions for these fighters
+        const subscriptionQuery = { fighterId: { $in: fighterIds } };
+        
+        // Add planType filter if specified
+        if (planType) {
+            subscriptionQuery.planType = planType;
+        }
+        
+        // Add status filter if specified
+        if (status && status !== 'no_subscription') {
+            subscriptionQuery.status = status;
+        }
+        
+        const subscriptions = await Subscription.find(subscriptionQuery)
+            .sort({ createdAt: -1 })
+            .lean();
+        
+        // Group subscriptions by fighterId for efficient lookup
+        const subscriptionsByFighter = {};
+        subscriptions.forEach(sub => {
+            const fighterId = sub.fighterId.toString();
+            if (!subscriptionsByFighter[fighterId]) {
+                subscriptionsByFighter[fighterId] = [];
+            }
+            subscriptionsByFighter[fighterId].push(sub);
+        });
+        
+        // Enrich fighters with their most recent subscription
+        fighters = fighters.map(fighter => {
+            const fighterSubscriptions = subscriptionsByFighter[fighter._id.toString()] || [];
+            
+            // Find the most recent subscription for this fighter
+            let currentSubscription = null;
+            if (fighterSubscriptions.length > 0) {
+                // Sort by createdAt descending to get the most recent
+                const sortedSubs = fighterSubscriptions.sort((a, b) => 
+                    new Date(b.createdAt) - new Date(a.createdAt)
+                );
+                currentSubscription = sortedSubs[0];
+            }
+            
+            return {
+                ...fighter,
+                currentSubscription: currentSubscription ? {
+                    ...currentSubscription,
+                    paidAmount: currentSubscription.paidAmount != null ? currentSubscription.paidAmount : 0,
+                    totalFee: currentSubscription.totalFee != null ? currentSubscription.totalFee : 0,
+                    remainingBalance: currentSubscription.remainingBalance != null ? currentSubscription.remainingBalance : 0,
+                    planType: currentSubscription.planType != null ? currentSubscription.planType : 'none',
+                    amount: currentSubscription.amount != null ? currentSubscription.amount : 0
+                } : null
+            };
+        });
+        
+        // Apply status filters that require date calculations after enrichment
+        if (status === 'active') {
+            const now = new Date();
+            fighters = fighters.filter(f => 
+                f.currentSubscription && new Date(f.currentSubscription.endDate) > now
+            );
+        } else if (status === 'inactive') {
+            const now = new Date();
+            fighters = fighters.filter(f => 
+                !f.currentSubscription || new Date(f.currentSubscription.endDate) <= now
+            );
+        } else if (status === 'no_subscription') {
+            fighters = fighters.filter(f => !f.currentSubscription);
+        }
+        
+        res.json({
+            fighters: fighters,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page,
+            total
+        });
+    } catch (err) {
+        console.error('Error fetching fighters with subscriptions:', err.message);
+        res.status(500).json({ msg: 'Server Error' });
+    }
+});
+
 
 // @route   GET /api/subscriptions/all
 // @desc    Get all subscriptions with fighter information (Admin only)
@@ -1225,7 +1400,7 @@ router.get('/all', auth, async (req, res) => {
         const skip = (page - 1) * limit;
         
         // Get filter parameters
-        const { planType, status, search } = req.query;
+        const { planType, status, search, department } = req.query;
         
         // Build query
         const query = {};
@@ -1254,7 +1429,7 @@ router.get('/all', auth, async (req, res) => {
                     { name: { $regex: search, $options: 'i' } },
                     { rfid: { $regex: search, $options: 'i' } }
                 ]
-            }).select('_id');
+            }).select('_id').lean();
             
             // Create search query for subscription fields
             const subscriptionSearchQuery = {
@@ -1309,12 +1484,36 @@ router.get('/all', auth, async (req, res) => {
             }
         }
         
+        // Add department filter if specified
+        if (department) {
+            // Find fighter IDs in the specified department
+            const fighterIdsInDept = await Fighter.find({ department: department }).select('_id').lean();
+            if (fighterIdsInDept.length > 0) {
+                // Add to existing query conditions
+                if (query.$and) {
+                    // If there's already an $and condition, add department filter to it
+                    query.$and.push({ fighterId: { $in: fighterIdsInDept.map(f => f._id) } });
+                } else {
+                    // Otherwise, just add the department filter
+                    query.fighterId = { $in: fighterIdsInDept.map(f => f._id) };
+                }
+            } else {
+                // If no fighters in department, return empty result
+                return res.json({
+                    subscriptions: [],
+                    totalPages: 0,
+                    currentPage: page,
+                    total: 0
+                });
+            }
+        }
+        
         // Get total count for pagination
         const total = await Subscription.countDocuments(query);
         
         // Get subscriptions with fighter information
         const subscriptions = await Subscription.find(query)
-            .populate('fighterId', 'name rfid')
+            .populate('fighterId', 'name rfid department')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -1540,7 +1739,7 @@ router.put('/:id', auth, async (req, res) => {
         }
         
         const { id } = req.params;
-        const { totalFee, paidAmount, remainingBalance, startDate, endDate, status, isActive, installmentCount, maxInstallments } = req.body;
+        const { totalFee, paidAmount, remainingBalance, startDate, endDate, status, isActive, installmentCount, maxInstallments, customDuration } = req.body;
         
         // Find the subscription by ID
         const subscription = await Subscription.findById(id);
@@ -1552,15 +1751,37 @@ router.put('/:id', auth, async (req, res) => {
         if (totalFee !== undefined) subscription.totalFee = totalFee;
         if (paidAmount !== undefined) subscription.paidAmount = paidAmount;
         if (remainingBalance !== undefined) subscription.remainingBalance = remainingBalance;
-        if (startDate !== undefined) subscription.startDate = startDate;
+        if (startDate !== undefined) {
+            subscription.startDate = startDate;
+            
+            // If customDuration is provided for custom plans, recalculate end date
+            if (subscription.planType === 'custom' && customDuration !== undefined) {
+                const newStartDate = new Date(startDate);
+                const newEndDate = new Date(newStartDate);
+                newEndDate.setMonth(newStartDate.getMonth() + parseInt(customDuration));
+                subscription.endDate = newEndDate;
+            }
+        }
         if (endDate !== undefined) subscription.endDate = endDate;
         if (status !== undefined) subscription.status = status;
         if (isActive !== undefined) subscription.isActive = isActive;
         if (installmentCount !== undefined) subscription.installmentCount = installmentCount;
         if (maxInstallments !== undefined) subscription.maxInstallments = maxInstallments;
         
+        // If customDuration is provided for custom plans, recalculate end date based on start date
+        if (subscription.planType === 'custom' && customDuration !== undefined && subscription.startDate) {
+            const newStartDate = new Date(subscription.startDate);
+            const newEndDate = new Date(newStartDate);
+            newEndDate.setMonth(newStartDate.getMonth() + parseInt(customDuration));
+            subscription.endDate = newEndDate;
+        }
+        
         // Update status based on payment amount if paidAmount is being updated
-        if (paidAmount !== undefined) {
+        // If admin explicitly sets status, respect that instead of calculating from payment amount
+        if (status !== undefined) {
+            // Admin explicitly set the status, so use that
+            subscription.status = status;
+        } else if (paidAmount !== undefined) {
             if (paidAmount >= (totalFee || subscription.totalFee)) {
                 subscription.status = 'paid';
             } else if (paidAmount > 0) {
@@ -1618,6 +1839,34 @@ router.put('/:id/cancel', auth, async (req, res) => {
         res.json({ msg: 'Subscription cancelled successfully', subscription });
     } catch (err) {
         console.error('Error cancelling subscription:', err.message);
+        res.status(500).json({ msg: 'Server Error' });
+    }
+});
+
+// @route   POST /api/subscriptions/sync-with-department/:fighterId
+// @desc    Sync a fighter's subscription with their department's fee structure (Admin only)
+// @access  Private (Admin)
+router.post('/sync-with-department/:fighterId', auth, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ msg: 'Access denied' });
+        }
+        
+        const { fighterId } = req.params;
+        
+        // Import the sync function
+        const { syncFighterSubscriptionWithDepartment } = require('./departmentSync');
+        
+        const updatedSubscription = await syncFighterSubscriptionWithDepartment(fighterId);
+        
+        if (updatedSubscription) {
+            res.json({ msg: 'Subscription synced with department successfully', subscription: updatedSubscription });
+        } else {
+            res.json({ msg: 'No active subscription to sync or fighter not found' });
+        }
+    } catch (err) {
+        console.error('Error syncing subscription with department:', err.message);
         res.status(500).json({ msg: 'Server Error' });
     }
 });

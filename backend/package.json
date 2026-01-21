@@ -6,7 +6,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "debug:fighters": "node debug_fighters.js"
+    "debug:fighters": "node debug_fighters.js",
+    "assign:senior-dept": "node assign-senior-department.js",
+    "update:senior-to-seniors": "node update-senior-to-seniors.js",
+    "fix:department-references": "node fix-department-references-final.js",
+    "normalize:department-names": "node update-department-names.js",
+    "fix:singular-senior": "node fix-senior-to-seniors-final.js",
+    "align-all-departments": "node check-all-departments.js"
   },
   "author": "Your Name",
   "license": "MIT",
