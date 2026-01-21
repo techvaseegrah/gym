@@ -83,6 +83,7 @@ app.get('/api/test', (req, res) => {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/fighters', require('./routes/fighters'));
+app.use('/api/departments', require('./routes/departments'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/doubts', require('./routes/doubts'));
