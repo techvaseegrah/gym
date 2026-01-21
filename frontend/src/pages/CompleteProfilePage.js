@@ -141,7 +141,7 @@ const CompleteProfilePage = () => {
                     <div className="p-6 bg-gray-700 rounded-lg">
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input type="checkbox" checked={formData.agreement} onChange={handleAgreementChange} className="h-5 w-5 bg-gray-600 border-gray-500 rounded text-red-500 focus:ring-red-500" />
-                            <span className="text-gray-300">I agree to the terms and conditions and the gym's code of conduct.</span>
+                            <span className="text-gray-300">I agree to the <a href="/terms-and-conditions" target="_blank" className="text-blue-400 hover:text-blue-300 underline">terms and conditions</a> and the gym's code of conduct.</span>
                         </label>
                     </div>
 

@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import FighterDashboard from '../components/FighterDashboard'; //
 import EnhancedLevelProgress from '../components/EnhancedLevelProgress'; // Import the new enhanced component
 
-const FighterHomePage = ({ user }) => {
+const FighterHomePage = ({ user, refreshUser }) => {
     const [activeTab, setActiveTab] = useState('dashboard'); //
 
     // Attendance functionality has been removed
 
     const renderContent = () => {
         if (activeTab === 'dashboard') {
-            return <FighterDashboard user={user} />; //
+            return <FighterDashboard user={user} refreshUser={refreshUser} />; //
         }
         // --- Replace the old Fighter Level tab with the new EnhancedLevelProgress ---
         if (activeTab === 'fighterLevel') {

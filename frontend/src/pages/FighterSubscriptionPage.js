@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 
-const FighterSubscriptionPage = () => {
+const FighterSubscriptionPage = ({ refreshUser }) => {
     const [subscriptions, setSubscriptions] = useState([]);
     const [currentSubscription, setCurrentSubscription] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -170,6 +170,11 @@ const FighterSubscriptionPage = () => {
                         fetchSubscriptions();
                         fetchCurrentSubscription();
                         
+                        // Refresh user data to update dashboard
+                        if (refreshUser) {
+                            await refreshUser();
+                        }
+                        
                         // Show success popup instead of alert
                         showPopup('Payment successful! Your subscription is now active.', 'success');
                         
@@ -299,6 +304,11 @@ const FighterSubscriptionPage = () => {
                         // Refresh subscription data
                         fetchSubscriptions();
                         fetchCurrentSubscription();
+                        
+                        // Refresh user data to update dashboard
+                        if (refreshUser) {
+                            await refreshUser();
+                        }
                         
                         // Show success popup
                         showPopup('Installment payment successful!', 'success');
@@ -653,18 +663,18 @@ const FighterSubscriptionPage = () => {
                                     Amount to Pay Now
                                 </label>
                             </div>
-                            <p className="text-xs text-gray-600 mb-3">Minimum ₹1 required. You can pay the remaining balance in flexible installments.</p>
+                            <p className="text-xs text-gray-600 mb-3">Minimum ₹500 required. You can pay the remaining balance in flexible installments.</p>
                             <input
                                 type="number"
-                                min="1"
+                                min="500"
                                 max="4000"
-                                placeholder="Enter amount (₹1-₹4000)"
+                                placeholder="Enter amount (₹500-₹4000)"
                                 className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-lg font-bold text-center"
                                 value={initialPaymentAmount || ''}
                                 onChange={(e) => setInitialPaymentAmount(e.target.value)}
                             />
                             <div className="flex justify-between mt-2 text-xs text-amber-700">
-                                <span>Min: ₹1</span>
+                                <span>Min: ₹500</span>
                                 <span>Max: ₹4000</span>
                             </div>
                         </div>
@@ -754,13 +764,13 @@ const FighterSubscriptionPage = () => {
                         {/* Initial Payment Input for Fixed Commitment Plan */}
                         <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Amount to Pay Now (Min ₹1)
+                                Amount to Pay Now (Min ₹500)
                             </label>
                             <input
                                 type="number"
-                                min="1"
+                                min="500"
                                 max="4000"
-                                placeholder="Enter amount (₹1-₹4000)"
+                                placeholder="Enter amount (₹500-₹4000)"
                                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                 value={initialPaymentAmount || ''}
                                 onChange={(e) => setInitialPaymentAmount(e.target.value)}

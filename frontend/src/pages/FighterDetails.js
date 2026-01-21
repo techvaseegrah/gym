@@ -385,6 +385,7 @@ const FighterDetails = () => {
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                                     <DetailItem label="RFID:" value={fighterData.rfid} />
                                     <DetailItem label="Batch No:" value={fighterData.fighterBatchNo} />
+                                    <DetailItem label="Department:" value={fighterData.department && fighterData.department.trim() !== '' ? fighterData.department.charAt(0).toUpperCase() + fighterData.department.slice(1) : 'Seniors (Default)'} />
                                     <DetailItem label="Age:" value={fighterData.age} />
                                     <DetailItem label="Gender:" value={fighterData.gender} />
                                     <DetailItem label="Phone:" value={fighterData.phNo} />

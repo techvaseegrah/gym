@@ -12,6 +12,7 @@ const EditFighter = () => {
         name: '',
         fighterBatchNo: '',
         email: '',
+        department: '',
     });
     const [profilePhoto, setProfilePhoto] = useState(null);
     const [existingProfilePhoto, setExistingProfilePhoto] = useState(null);
@@ -24,6 +25,8 @@ const EditFighter = () => {
     const webcamRef = useRef(null);
     const [modelsLoaded, setModelsLoaded] = useState(false);
     const [captureMessage, setCaptureMessage] = useState('');
+    const [departments, setDepartments] = useState([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(true);
 
     useEffect(() => {
         const fetchFighter = async () => {
@@ -33,6 +36,7 @@ const EditFighter = () => {
                     name: res.data.name,
                     fighterBatchNo: res.data.fighterBatchNo,
                     email: res.data.email,
+                    department: res.data.department || '',
                 });
                 setExistingProfilePhoto(res.data.profilePhoto);
                 // Set existing face encodings if they exist
@@ -49,7 +53,28 @@ const EditFighter = () => {
             }
         };
         fetchFighter();
+        loadDepartments();
     }, [id]);
+
+    const loadDepartments = async () => {
+        try {
+            const response = await api.get('/departments');
+            setDepartments(response.data);
+            setDepartmentsLoading(false);
+        } catch (error) {
+            console.error('Error fetching departments:', error);
+            // Fallback to default departments if API fails
+            const defaultDepts = [
+                { name: 'seniors' },
+                { name: 'senior' },
+                { name: 'junior' },
+                { name: 'silambam' },
+                { name: 'bharatanatyam' }
+            ];
+            setDepartments(defaultDepts);
+            setDepartmentsLoading(false);
+        }
+    };
 
     // Load face recognition models
     useEffect(() => {
@@ -194,6 +219,27 @@ const EditFighter = () => {
                 <div>
                     <label className="block text-gray-700">Email (for login)</label>
                     <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-3 py-2 border rounded-md" required />
+                </div>
+                <div>
+                    <label className="block text-gray-700">Department</label>
+                    <select
+                        name="department"
+                        value={formData.department}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border rounded-md"
+                        required
+                        disabled={departmentsLoading}
+                    >
+                        {departmentsLoading ? (
+                            <option>Loading departments...</option>
+                        ) : (
+                            departments.map((dept, index) => (
+                                <option key={index} value={dept.name}>
+                                    {dept.name.charAt(0).toUpperCase() + dept.name.slice(1)}
+                                </option>
+                            ))
+                        )}
+                    </select>
                 </div>
                 
                 {/* Profile Photo Upload */}

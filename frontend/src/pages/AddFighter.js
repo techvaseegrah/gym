@@ -9,7 +9,8 @@ const AddFighter = ({ onAddSuccess, onCancel }) => {
         name: '',
         email: '',
         password: '',
-        rfid: ''
+        rfid: '',
+        department: ''
     });
     const [faceEncodings, setFaceEncodings] = useState([]);
     const [message, setMessage] = useState('');
@@ -19,6 +20,8 @@ const AddFighter = ({ onAddSuccess, onCancel }) => {
     const webcamRef = useRef(null);
     const [modelsLoaded, setModelsLoaded] = useState(false);
     const [captureMessage, setCaptureMessage] = useState('');
+    const [departments, setDepartments] = useState([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(true);
 
     const generateRfid = () => {
         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -29,8 +32,38 @@ const AddFighter = ({ onAddSuccess, onCancel }) => {
 
     useEffect(() => {
         loadModels();
+        loadDepartments();
         setFormData(prev => ({ ...prev, rfid: generateRfid() }));
     }, []);
+
+    const loadDepartments = async () => {
+        try {
+            const response = await api.get('/departments');
+            setDepartments(response.data);
+            if (response.data.length > 0) {
+                // Check if 'senior' department exists and prioritize it
+                const seniorDept = response.data.find(dept => dept.name.toLowerCase() === 'senior');
+                const deptToUse = seniorDept ? seniorDept.name : response.data[0].name;
+                setFormData(prev => ({ ...prev, department: deptToUse }));
+            }
+            setDepartmentsLoading(false);
+        } catch (error) {
+            console.error('Error fetching departments:', error);
+            // Fallback to default departments if API fails
+            const defaultDepts = [
+                { name: 'senior' },
+                { name: 'seniors' },
+                { name: 'junior' },
+                { name: 'silambam' },
+                { name: 'bharatanatyam' }
+            ];
+            setDepartments(defaultDepts);
+            if (defaultDepts.length > 0) {
+                setFormData(prev => ({ ...prev, department: defaultDepts[0].name }));
+            }
+            setDepartmentsLoading(false);
+        }
+    };
 
     const loadModels = async () => {
         const MODEL_URL = '/models';
@@ -136,14 +169,15 @@ const AddFighter = ({ onAddSuccess, onCancel }) => {
                 password: formData.password,
                 rfid: formData.rfid,
                 faceEncodings: JSON.stringify(faceEncodings),
-                profilePhoto: profilePhoto // Send Base64 encoded image
+                profilePhoto: profilePhoto, // Send Base64 encoded image
+                department: formData.department
             };
 
             await api.post('/fighters/register', payload);
             
             setMessage('Fighter added successfully with high accuracy face recognition!');
             setIsError(false);
-            setFormData({ name: '', email: '', password: '', rfid: generateRfid() });
+            setFormData({ name: '', email: '', password: '', rfid: generateRfid(), department: 'senior' });
             setFaceEncodings([]);
             setProfilePhoto(null);
             
@@ -263,7 +297,7 @@ const AddFighter = ({ onAddSuccess, onCancel }) => {
                             </div>
                         )}
                     </div>
-
+                                
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="rfid">
                             RFID <span className="text-red-500">*</span>
@@ -289,6 +323,33 @@ const AddFighter = ({ onAddSuccess, onCancel }) => {
                             >
                                 <FaSyncAlt />
                             </button>
+                        </div>
+                    </div>
+                                
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="department">
+                            Department <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="department"
+                                name="department"
+                                value={formData.department}
+                                onChange={handleChange}
+                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                                required
+                                disabled={departmentsLoading}
+                            >
+                                {departmentsLoading ? (
+                                    <option>Loading departments...</option>
+                                ) : (
+                                    departments.map((dept, index) => (
+                                        <option key={index} value={dept.name}>
+                                            {dept.name.charAt(0).toUpperCase() + dept.name.slice(1)}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
                         </div>
                     </div>
                 </div>

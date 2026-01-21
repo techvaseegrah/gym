@@ -22,10 +22,15 @@ import FighterFaceRecognitionPage from './pages/FighterFaceRecognitionPage';
 import AskDoubtPage from './pages/AskDoubtPage';
 import FighterSubscriptionPage from './pages/FighterSubscriptionPage'; // Add subscription page
 import AdminSubscriptionManagementPage from './pages/AdminSubscriptionManagementPage'; // Add admin subscription page
+import DepartmentsPage from './pages/DepartmentsPage';
+import AddDepartmentPage from './pages/AddDepartmentPage';
+import EditDepartmentPage from './pages/EditDepartmentPage';
 import FighterSubscriptionReportPage from './pages/FighterSubscriptionReportPage'; // Add fighter subscription report page
 import TermsAndConditionsPage from './pages/TermsAndConditionsPage'; // Add terms page
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'; // Add privacy policy page
 import CookiePolicyPage from './pages/CookiePolicyPage'; // Add cookie policy page
+import RefundPolicyPage from './pages/RefundPolicyPage'; // Add refund policy page
+import ContactUsPage from './pages/ContactUsPage'; // Add contact us page
 
 // Import Components
 import AdminSidebar from './components/AdminSidebar';
@@ -36,14 +41,62 @@ const App = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    
+    // Function to refresh user data
+    const refreshUser = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No token found');
+            }
+            
+            // Get user role from token to decide which endpoint to call
+            const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+            const userRole = tokenPayload.user?.role;
+            
+            let userData;
+            if (userRole === 'fighter') {
+                // For fighters, use the /fighters/me endpoint to get complete profile data
+                userData = await api.get('/fighters/me');
+            } else {
+                // For admins, use the /auth/user endpoint
+                userData = await api.get('/auth/user');
+            }
+            
+            setUser(userData.data);
+            return userData.data;
+        } catch (error) {
+            console.error("Error refreshing user data:", error);
+            return null;
+        }
+    };
 
     useEffect(() => {
         const loadUser = async () => {
             const token = localStorage.getItem('token');
             if (token) {
                 try {
-                    const { data } = await api.get('/auth/user');
-                    setUser(data);
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        // Get user role from token to decide which endpoint to call
+                        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+                        const userRole = tokenPayload.user?.role;
+                        
+                        let userData;
+                        if (userRole === 'fighter') {
+                            // For fighters, use the /fighters/me endpoint to get complete profile data
+                            userData = await api.get('/fighters/me');
+                        } else {
+                            // For admins, use the /auth/user endpoint
+                            userData = await api.get('/auth/user');
+                        }
+                        
+                        setUser(userData.data);
+                        // Set userId in localStorage when user data is loaded
+                        if (userData.data._id) {
+                            localStorage.setItem('userId', userData.data._id);
+                        }
+                    }
                 } catch (error) {
                     console.error("Session expired or token is invalid.");
                     setUser(null);
@@ -220,20 +273,25 @@ const App = () => {
                 <Route path="/admin/fighter/:id" element={<ProtectedRoute role="admin"><AdminLayout><ViewFighterDetailsPage /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/attendance" element={<ProtectedRoute role="admin"><AdminLayout><AdminAttendancePage /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute role="admin"><AdminLayout><AdminSettingsPage /></AdminLayout></ProtectedRoute>} />
-                <Route path="/admin/subscriptions" element={<ProtectedRoute role="admin"><AdminLayout><AdminSubscriptionManagementPage /></AdminLayout></ProtectedRoute>} /> {/* Add admin subscription route */}
+                <Route path="/admin/subscriptions" element={<ProtectedRoute role="admin"><AdminLayout><AdminSubscriptionManagementPage refreshUser={refreshUser} /></AdminLayout></ProtectedRoute>} /> {/* Add admin subscription route */}
                 <Route path="/fighter/attendance/face" element={<ProtectedRoute role="fighter"><FighterLayout><FighterFaceRecognitionPage /></FighterLayout></ProtectedRoute>} />
                 <Route path="/admin/ask-doubt" element={<ProtectedRoute role="admin"><AdminLayout><AskDoubtPage /></AdminLayout></ProtectedRoute>} />
                 <Route path="/admin/fighter-level" element={<ProtectedRoute role="admin"><AdminLayout><FighterLevelPage /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/departments" element={<ProtectedRoute role="admin"><AdminLayout><DepartmentsPage /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/departments/add" element={<ProtectedRoute role="admin"><AdminLayout><AddDepartmentPage /></AdminLayout></ProtectedRoute>} />
+                <Route path="/admin/departments/edit/:deptName" element={<ProtectedRoute role="admin"><AdminLayout><EditDepartmentPage /></AdminLayout></ProtectedRoute>} />
                 {/* Fighter Routes */}
                 <Route path="/fighter/ask-doubt" element={<ProtectedRoute role="fighter"><FighterLayout><AskDoubtPage /></FighterLayout></ProtectedRoute>} />
                 <Route path="/fighter/complete-profile" element={<ProtectedRoute role="fighter"><CompleteProfilePage /></ProtectedRoute>} />
-                <Route path="/fighter" element={<ProtectedRoute role="fighter"><FighterLayout><FighterHomePage user={user} /></FighterLayout></ProtectedRoute>} />
+                <Route path="/fighter" element={<ProtectedRoute role="fighter"><FighterLayout><FighterHomePage user={user} refreshUser={refreshUser} /></FighterLayout></ProtectedRoute>} />
                 <Route path="/fighter/attendance" element={<ProtectedRoute role="fighter"><FighterLayout><FighterAttendancePage user={user} /></FighterLayout></ProtectedRoute>} />
-                <Route path="/fighter/subscription" element={<ProtectedRoute role="fighter"><FighterLayout><FighterSubscriptionPage /></FighterLayout></ProtectedRoute>} /> {/* Add fighter subscription route */}
+                <Route path="/fighter/subscription" element={<ProtectedRoute role="fighter"><FighterLayout><FighterSubscriptionPage refreshUser={refreshUser} /></FighterLayout></ProtectedRoute>} /> {/* Add fighter subscription route */}
                 <Route path="/fighter/subscription-report" element={<ProtectedRoute role="fighter"><FighterLayout><FighterSubscriptionReportPage /></FighterLayout></ProtectedRoute>} /> {/* Add fighter subscription report route */}
                 <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="/cookie-policy" element={<CookiePolicyPage />} />
+                <Route path="/refund-policy" element={<RefundPolicyPage />} />
+                <Route path="/contact-us" element={<ContactUsPage />} />
             </Routes>
         </Router>
     );

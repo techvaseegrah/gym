@@ -19,8 +19,9 @@ import {
 } from 'react-icons/fa';
 
 const AdminSidebar = ({ handleLogout, closeSidebar }) => {
-    // State for the dropdown menu is okay to keep
+    // State for the dropdown menus
     const [isManageFightersOpen, setIsManageFightersOpen] = useState(false);
+    const [isDepartmentsOpen, setIsDepartmentsOpen] = useState(false);
 
     const linkClasses = "flex items-center w-full px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors duration-200";
     const activeLinkClasses = "bg-red-600 text-white";
@@ -106,6 +107,39 @@ const AdminSidebar = ({ handleLogout, closeSidebar }) => {
                 >
                     <FaCreditCard className="mr-3" /> Subscriptions
                 </NavLink>
+
+                
+                {/* Manage Departments Dropdown */}
+                <div className="mb-2">
+                    <button
+                        onClick={() => setIsDepartmentsOpen(!isDepartmentsOpen)}
+                        className={`${linkClasses} justify-between`}
+                    >
+                        <div className="flex items-center">
+                            <FaUsers className="mr-3" /> Departments
+                        </div>
+                        {isDepartmentsOpen ? <FaAngleUp /> : <FaAngleDown />}
+                    </button>
+                    {isDepartmentsOpen && (
+                        <div className="mt-2 space-y-2 pl-4">
+                            <NavLink
+                                to="/admin/departments"
+                                className={({ isActive }) => `${subLinkClasses} ${isActive ? activeSubLinkClasses : ''}`}
+                                onClick={handleLinkClick}
+                            >
+                                <FaListAlt className="mr-3" /> View Departments
+                            </NavLink>
+                            <NavLink
+                                to="/admin/departments/add"
+                                className={({ isActive }) => `${subLinkClasses} ${isActive ? activeSubLinkClasses : ''}`}
+                                onClick={handleLinkClick}
+                            >
+                                <FaUserPlus className="mr-3" /> Add Department
+                            </NavLink>
+                        </div>
+                    )}
+                </div>
+                
                 <NavLink
                     to="/admin/ask-doubt"
                     className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}

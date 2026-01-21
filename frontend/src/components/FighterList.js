@@ -59,6 +59,7 @@ const FighterList = () => {
                         <tr>
                             <th className="py-2 px-4 border-b">Fighter Name</th>
                             <th className="py-2 px-4 border-b">Batch Number</th>
+                            <th className="py-2 px-4 border-b">Department</th>
                             {/* --- Start of New Code --- */}
                             <th className="py-2 px-4 border-b">RFID</th>
                             {/* --- End of New Code --- */}
@@ -71,6 +72,17 @@ const FighterList = () => {
                             <tr key={fighter._id}>
                                 <td className="py-2 px-4 border-b text-center">{fighter.name}</td>
                                 <td className="py-2 px-4 border-b text-center">{fighter.fighterBatchNo}</td>
+                                <td className="py-2 px-4 border-b text-center">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        fighter.department === 'senior' ? 'bg-blue-100 text-blue-800' :
+                                        fighter.department === 'junior' ? 'bg-green-100 text-green-800' :
+                                        fighter.department === 'silambam' ? 'bg-purple-100 text-purple-800' :
+                                        fighter.department === 'bharatanatyam' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }`}>
+                                        {fighter.department && fighter.department.trim() !== '' ? fighter.department.charAt(0).toUpperCase() + fighter.department.slice(1) : 'Seniors (Default)'}
+                                    </span>
+                                </td>
                                 {/* --- Start of New Code --- */}
                                 <td className="py-2 px-4 border-b text-center">{fighter.rfid}</td>
                                 {/* --- End of New Code --- */}

@@ -44,6 +44,7 @@ const LoginPage = ({ setUser }) => {
         try {
             const res = await api.post('/auth/login', { ...adminCredentials, role: 'admin' });
             localStorage.setItem('token', res.data.token);
+            localStorage.setItem('userId', res.data.user._id);
             setUser(res.data.user);
             navigate('/admin/dashboard');
         } catch (err) {
@@ -58,14 +59,19 @@ const LoginPage = ({ setUser }) => {
         setError(null);
         setLoading(true);
         try {
-            const { data } = await api.post('/auth/login', {
+            const { data: loginData } = await api.post('/auth/login', {
                 email: selectedFighter.email,
                 password: password,
             });
-            localStorage.setItem('token', data.token);
-            setUser(data.user);
+            localStorage.setItem('token', loginData.token);
+            
+            // Get complete fighter profile data using /fighters/me endpoint
+            const profileRes = await api.get('/fighters/me');
+            localStorage.setItem('userId', profileRes.data._id);
+            setUser(profileRes.data);
+            
             setIsPasswordModalOpen(false); // Close modal on success
-            navigate(data.user.profile_completed ? '/fighter' : '/fighter/complete-profile');
+            navigate(profileRes.data.profile_completed ? '/fighter' : '/fighter/complete-profile');
         } catch (err) {
             setError(err.response?.data?.msg || 'Invalid password.');
         } finally {
@@ -251,6 +257,8 @@ const LoginPage = ({ setUser }) => {
                     <a href="/terms-and-conditions" className="hover:text-gray-700 hover:underline">Terms & Conditions</a>
                     <a href="/privacy-policy" className="hover:text-gray-700 hover:underline">Privacy Policy</a>
                     <a href="/cookie-policy" className="hover:text-gray-700 hover:underline">Cookie Policy</a>
+                    <a href="/refund-policy" className="hover:text-gray-700 hover:underline">Refund Policy</a>
+                    <a href="/contact-us" className="hover:text-gray-700 hover:underline">Contact Us</a>
                 </div>
             </div>
             {/* --- ADD THIS AT THE END OF THE MAIN DIV --- */}
